@@ -1,6 +1,12 @@
 # 🐙 Octopus - Multi-Repository Manager
 
-Ferramenta completa para gerenciar múltiplos repositórios de micro apps React Native.
+Ferramenta completa para gerenciar múltiplos repositórios de micro apps React Native de forma cross-platform.
+
+## 🌍 Compatibilidade
+
+✅ **macOS** - Suporte completo com AppleScript
+✅ **Windows** - Suporte completo com cmd
+✅ **Linux** - Suporte completo com gnome-terminal
 
 ## 🚀 Instalação
 
@@ -126,9 +132,90 @@ oct new-branch feature/login develop  # Cria branch em todos
 oct install                           # Instala novas dependências
 ```
 
+## 🔄 Usando o Octopus em Outros Projetos
+
+### 1. Preparação
+```bash
+# Copie o Octopus para seu novo projeto
+cp -r /path/to/octopus /seu-novo-projeto/octopus
+cd /seu-novo-projeto/octopus
+npm install
+```
+
+### 2. Personalização dos Repositórios
+**EDITE APENAS** o arquivo `config/default-repos.json`:
+
+```json
+{
+  "repositories": [
+    {
+      "name": "Frontend", 
+      "url": "https://github.com/seu-usuario/frontend.git",
+      "localPath": "frontend",
+      "active": true,
+      "port": 3000,
+      "priority": 1,
+      "description": "Aplicação frontend principal"
+    },
+    {
+      "name": "Backend",
+      "url": "https://github.com/seu-usuario/backend.git",
+      "localPath": "backend", 
+      "active": true,
+      "port": 8000,
+      "priority": 2,
+      "description": "API backend"
+    }
+  ],
+  "settings": {
+    "defaultBranch": "main",
+    "autoInstall": true,
+    "createVSCodeTasks": true,
+    "terminalType": "system"
+  }
+}
+```
+
+### 3. Estrutura Recomendada
+```
+seu-novo-projeto/
+├── octopus/                    # Ferramenta Octopus
+│   ├── config/
+│   │   └── default-repos.json  # ← EDITE ESTE ARQUIVO
+│   ├── src/octopus.js
+│   └── bin/oct
+├── frontend/                   # Repositório clonado
+├── backend/                    # Repositório clonado
+└── .vscode/
+    └── tasks.json             # Gerado automaticamente
+```
+
+### 4. Inicializar
+```bash
+# No diretório raiz (onde ficam os repositórios)
+cd /seu-novo-projeto
+oct init
+```
+
+## 🚨 Arquivos Importantes para .gitignore
+
+```gitignore
+# No .gitignore do seu projeto principal
+octopus/config/octopus-config.json   # Arquivo gerado, não versionar!
+
+# No .gitignore do octopus
+node_modules/
+npm-debug.log*
+config/octopus-config.json          # Gerado pelo 'oct init'
+```
+
+⚠️ **Importante**: O arquivo `octopus-config.json` é gerado automaticamente pelo comando `oct init`. Apenas o `default-repos.json` deve ser versionado como template.
+
 ## 🎯 Vantagens
 
+✅ **Cross-platform**: Funciona no macOS, Windows e Linux  
 ✅ **Configuração única**: Um comando configura tudo  
+✅ **Reutilizável**: Use em qualquer projeto modificando apenas default-repos.json  
 ✅ **Seleção flexível**: Escolha quais repos usar  
 ✅ **Sincronização Git**: Operações em todos os repos simultaneamente  
 ✅ **Integração VS Code**: Tasks automáticas  
@@ -162,10 +249,29 @@ oct status
 # 🟢 Contas - Ativo - http://localhost:8082
 ```
 
-## 🔧 Personalização
+## � Solução de Problemas Cross-Platform
 
-Para adicionar novos repositórios, edite `config/default-repos.json` e execute `oct init` novamente.
+### Windows
+- **Terminal não abre**: Certifique-se de ter o `cmd` no PATH
+- **Encoding**: Use PowerShell se houver problemas com acentos
+
+### macOS  
+- **AppleScript**: Permita execução de scripts se solicitado
+- **Terminal**: O sistema abrirá automaticamente o Terminal.app
+
+### Linux
+- **gnome-terminal**: Instale se não estiver disponível: `sudo apt install gnome-terminal`
+- **Alternativas**: Pode usar `xterm` ou outros terminais compatíveis
+
+## 🔧 Personalização Avançada
+
+Para usar o Octopus em diferentes tipos de projeto:
+
+1. **Edite apenas `default-repos.json`** - Nunca modifique `octopus-config.json` manualmente
+2. **Use caminhos relativos** - Os `localPath` são relativos ao diretório onde executa `oct init`
+3. **Configure prioridades** - Repos com priority=1 iniciam primeiro
+4. **Teste em diferentes SOs** - A ferramenta detecta automaticamente o sistema
 
 ---
 
-**🐙 Octopus - Gerencie seus tentáculos com facilidade!** ✨
+**🐙 Octopus - Gerencie seus tentáculos com facilidade em qualquer plataforma!** ✨

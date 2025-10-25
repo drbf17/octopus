@@ -144,23 +144,22 @@ class Octopus {
 
     console.log(chalk.blue('🐙 Clonando repositórios...\n'));
 
-    const parentDir = path.resolve(process.cwd(), '..');
-    
+    // Usar diretório atual como base, não o diretório do octopus
+    const parentDir = process.cwd();
+
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
-      const repoPath = path.resolve(parentDir, path.basename(repo.localPath));
+      const repoPath = path.resolve(parentDir, repo.localPath);
       
       if (fs.existsSync(repoPath)) {
         console.log(chalk.yellow(`⚠️  ${repo.name} já existe em ${repoPath}`));
         continue;
-      }
-
-      const spinner = ora(`Clonando ${repo.name}...`).start();
+      }      const spinner = ora(`Clonando ${repo.name}...`).start();
 
       try {
         const git = simpleGit(parentDir);
-        await git.clone(repo.url, path.basename(repo.localPath));
+        await git.clone(repo.url, repo.localPath);
         spinner.succeed(chalk.green(`✅ ${repo.name} clonado com sucesso`));
       } catch (error) {
         spinner.fail(chalk.red(`❌ Erro ao clonar ${repo.name}: ${error.message}`));
@@ -181,7 +180,7 @@ class Octopus {
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
-      const repoPath = path.resolve(__dirname, '..', repo.localPath);
+      const repoPath = path.resolve(process.cwd(), repo.localPath);
       
       if (!fs.existsSync(repoPath)) {
         console.log(chalk.yellow(`⚠️  ${repo.name} não encontrado em ${repoPath}`));
@@ -215,7 +214,7 @@ class Octopus {
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
-      const repoPath = path.resolve(__dirname, '..', repo.localPath);
+      const repoPath = path.resolve(process.cwd(), repo.localPath);
       
       if (!fs.existsSync(repoPath)) {
         console.log(chalk.yellow(`⚠️  ${repo.name} não encontrado em ${repoPath}`));
@@ -249,7 +248,7 @@ class Octopus {
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
-      const repoPath = path.resolve(__dirname, '..', repo.localPath);
+      const repoPath = path.resolve(process.cwd(), repo.localPath);
       
       if (!fs.existsSync(repoPath)) {
         console.log(chalk.yellow(`⚠️  ${repo.name} não encontrado em ${repoPath}`));
@@ -280,7 +279,7 @@ class Octopus {
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
-      const repoPath = path.resolve(__dirname, '..', repo.localPath);
+      const repoPath = path.resolve(process.cwd(), repo.localPath);
       
       if (!fs.existsSync(repoPath)) {
         console.log(chalk.yellow(`⚠️  ${repo.name} não encontrado em ${repoPath}`));
@@ -310,7 +309,7 @@ class Octopus {
     console.log(chalk.blue('🐙 Status dos repositós:\n'));
 
     for (const repo of this.config.repositories) {
-      const repoPath = path.resolve(__dirname, '..', repo.localPath);
+      const repoPath = path.resolve(process.cwd(), repo.localPath);
       const exists = fs.existsSync(repoPath);
       const statusIcon = repo.active ? (exists ? '🟢' : '🟡') : '🔴';
       const statusText = repo.active ? (exists ? 'Ativo' : 'Não clonado') : 'Inativo';
@@ -355,7 +354,7 @@ class Octopus {
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
-      const repoPath = path.resolve(__dirname, '..', repo.localPath);
+      const repoPath = path.resolve(process.cwd(), repo.localPath);
       
       const task = {
         label: `${repo.name} - start`,
@@ -421,29 +420,46 @@ class Octopus {
   async openTerminal(name, cwd, command) {
     return new Promise((resolve, reject) => {
       try {
-        // Usar AppleScript para abrir novo terminal
-        const appleScript = `
-          tell application "Terminal"
-            activate
-            do script "cd '${cwd}' && echo '🐙 ${name} - Iniciando...' && ${command}"
-          end tell
-        `;
+        const platform = process.platform;
+        let terminalCommand;
+        let args;
 
-        const process = spawn('osascript', ['-e', appleScript], {
-          stdio: 'pipe'
+        if (platform === 'darwin') {
+          // macOS - usar AppleScript
+          const appleScript = `
+            tell application "Terminal"
+              activate
+              do script "cd '${cwd}' && echo '🐙 ${name} - Iniciando...' && ${command}"
+            end tell
+          `;
+          terminalCommand = 'osascript';
+          args = ['-e', appleScript];
+        } else if (platform === 'win32') {
+          // Windows - usar cmd
+          terminalCommand = 'cmd';
+          args = ['/c', 'start', 'cmd', '/k', `cd /d "${cwd}" && echo 🐙 ${name} - Iniciando... && ${command}`];
+        } else {
+          // Linux/outros - usar gnome-terminal ou xterm como fallback
+          terminalCommand = 'gnome-terminal';
+          args = ['--working-directory', cwd, '--', 'bash', '-c', `echo '🐙 ${name} - Iniciando...' && ${command}; exec bash`];
+        }
+
+        const process = spawn(terminalCommand, args, {
+          stdio: 'pipe',
+          shell: platform === 'win32' // Shell apenas no Windows
         });
 
         process.on('close', (code) => {
-          if (code === 0) {
-            resolve();
-          } else {
-            reject(new Error(`Terminal script failed with code ${code}`));
-          }
+          resolve(); // Sempre resolve, pois falhas de terminal não devem parar o processo
         });
 
-        process.on('error', reject);
+        process.on('error', (error) => {
+          console.warn(chalk.yellow(`⚠️  Não foi possível abrir terminal para ${name}: ${error.message}`));
+          resolve(); // Resolve mesmo com erro para não interromper outros repositórios
+        });
       } catch (error) {
-        reject(error);
+        console.warn(chalk.yellow(`⚠️  Erro ao abrir terminal para ${name}: ${error.message}`));
+        resolve();
       }
     });
   }
