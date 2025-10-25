@@ -120,7 +120,7 @@ class Octopus {
       {
         type: 'confirm',
         name: 'shouldInstall',
-        message: 'Executar npm install nos repositórios existentes?',
+        message: 'Executar yarn install nos repositórios existentes?',
         default: true
       }
     ]);
@@ -258,7 +258,7 @@ class Octopus {
       const spinner = ora(`Instalando ${repo.name}...`).start();
 
       try {
-        await this.runCommand('npm', ['install'], repoPath);
+        await this.runCommand('yarn', ['install'], repoPath);
         spinner.succeed(chalk.green(`✅ ${repo.name}: dependências instaladas`));
       } catch (error) {
         spinner.fail(chalk.red(`❌ ${repo.name}: ${error.message}`));
@@ -290,7 +290,7 @@ class Octopus {
 
       try {
         // Abrir terminal separado para cada repo
-        await this.openTerminal(repo.name, repoPath, 'npm start');
+        await this.openTerminal(repo.name, repoPath, 'yarn start');
       } catch (error) {
         console.error(chalk.red(`❌ Erro ao iniciar ${repo.name}:`), error.message);
       }
@@ -359,7 +359,7 @@ class Octopus {
       const task = {
         label: `${repo.name} - start`,
         type: "shell",
-        command: "npm run start",
+        command: "yarn start",
         options: {
           cwd: repoPath
         },

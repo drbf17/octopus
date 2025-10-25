@@ -12,8 +12,8 @@ Ferramenta completa para gerenciar múltiplos repositórios de micro apps React 
 
 ```bash
 cd octopus
-npm install
-npm link  # Para usar o comando 'oct' globalmente
+yarn install
+yarn link  # Para usar o comando 'oct' globalmente
 ```
 
 ## 📋 Comandos Disponíveis
@@ -42,10 +42,10 @@ oct checkout <branch-name>          # Checkout + pull em todos os repos
 oct new-branch <name> [base-branch] # Cria nova branch em todos os repos
 ```
 
-### 📦 Gerenciamento NPM
+### 📦 Gerenciamento Yarn
 ```bash
-oct install  # npm install em todos (mesmo terminal)
-oct start    # npm start em todos (terminais separados)
+oct install  # yarn install em todos (mesmo terminal)
+oct start    # yarn start em todos (terminais separados)
 ```
 
 ### 📊 Informações
@@ -139,7 +139,7 @@ oct install                           # Instala novas dependências
 # Copie o Octopus para seu novo projeto
 cp -r /path/to/octopus /seu-novo-projeto/octopus
 cd /seu-novo-projeto/octopus
-npm install
+yarn install
 ```
 
 ### 2. Personalização dos Repositórios
@@ -205,7 +205,8 @@ octopus/config/octopus-config.json   # Arquivo gerado, não versionar!
 
 # No .gitignore do octopus
 node_modules/
-npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 config/octopus-config.json          # Gerado pelo 'oct init'
 ```
 

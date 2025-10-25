@@ -82,13 +82,13 @@ ecommerce-project/
 # 1. Copiar o Octopus
 cp -r /path/to/octopus /meu-projeto-ecommerce/octopus
 cd /meu-projeto-ecommerce/octopus
-npm install
+yarn install
 
 # 2. Editar configuração
 # Edite octopus/config/default-repos.json com as URLs dos seus repos
 
 # 3. Tornar comando disponível (opcional)
-npm link
+yarn link
 
 # 4. Configurar projeto
 cd /meu-projeto-ecommerce
