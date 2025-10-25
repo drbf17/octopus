@@ -65,6 +65,8 @@ coverage/
 # Workspace configuration that might be machine-specific
 config/App-workspace.code-workspace
 
-# Keep configuration templates but ignore user modifications
-# config/octopus-config.json  # Keep this if it contains user-specific settings
-# config/default-repos.json   # This should be versioned as it's a template
+# User-generated configuration files (created by 'oct init')
+config/octopus-config.json
+
+# Keep configuration templates
+# config/default-repos.json should be versioned as it's the template
