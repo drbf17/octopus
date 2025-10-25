@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "../../Auth"
+		},
+		{
+			"path": "../../Home"
+		},
+		{
+			"path": "../../Contas"
+		},
+		{
+			"path": "../../Host"
+		},
+		{
+			"path": "../../orchestrator"
+		},
+		{
+			"path": ".."
+		}
+	]
+}

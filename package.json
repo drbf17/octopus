@@ -1,0 +1,29 @@
+{
+  "name": "octopus",
+  "version": "1.0.0",
+  "description": "🐙 Multi-repository manager for React Native micro apps",
+  "main": "src/octopus.js",
+  "bin": {
+    "oct": "./bin/oct"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1",
+    "inquirer": "^8.2.4",
+    "simple-git": "^3.19.1",
+    "commander": "^9.4.1"
+  },
+  "keywords": [
+    "microservices",
+    "react-native",
+    "multi-repo",
+    "git",
+    "npm",
+    "vscode"
+  ],
+  "author": "drbf17",
+  "license": "MIT"
+}

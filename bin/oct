@@ -1,0 +1,70 @@
+#!/usr/bin/env node
+
+const { Command } = require('commander');
+const Octopus = require('../src/octopus');
+
+const program = new Command();
+const octopus = new Octopus();
+
+program
+  .name('oct')
+  .description('🐙 Octopus - Multi-repository manager for React Native micro apps')
+  .version('1.0.0');
+
+program
+  .command('init')
+  .description('Initialize Octopus with repo selection and VS Code tasks')
+  .action(async () => {
+    await octopus.init();
+  });
+
+program
+  .command('clone')
+  .description('Clone all configured repositories')
+  .action(async () => {
+    await octopus.clone();
+  });
+
+program
+  .command('checkout <branch>')
+  .description('Checkout and pull branch in all repositories')
+  .action(async (branch) => {
+    await octopus.checkout(branch);
+  });
+
+program
+  .command('new-branch <name> [base]')
+  .description('Create new branch in all repositories (optionally from base branch)')
+  .action(async (name, base) => {
+    await octopus.newBranch(name, base);
+  });
+
+program
+  .command('install')
+  .description('Run npm install in all repositories')
+  .action(async () => {
+    await octopus.install();
+  });
+
+program
+  .command('start')
+  .description('Run npm start in all repositories (separate terminals)')
+  .action(async () => {
+    await octopus.start();
+  });
+
+program
+  .command('status')
+  .description('Show status of all repositories')
+  .action(async () => {
+    await octopus.status();
+  });
+
+program
+  .command('list')
+  .description('List all configured repositories')
+  .action(async () => {
+    await octopus.list();
+  });
+
+program.parse();
