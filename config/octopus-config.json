@@ -2,7 +2,7 @@
   "repositories": [
     {
       "name": "Host",
-      "url": "https://github.com/drbf17/Host-MicroApp.git",
+      "url": "https://github.com/drbf17/Host-SuperApp.git",
       "localPath": "../Host",
       "active": true,
       "port": 8081,
@@ -11,7 +11,7 @@
     },
     {
       "name": "Auth",
-      "url": "https://github.com/drbf17/Auth-MicroApp.git",
+      "url": "https://github.com/drbf17/Auth--MicroApp.git",
       "localPath": "../Auth",
       "active": true,
       "port": 8084,
@@ -20,7 +20,7 @@
     },
     {
       "name": "Home",
-      "url": "https://github.com/drbf17/Home-MicroApp.git",
+      "url": "https://github.com/drbf17/Home-Micro-App.git",
       "localPath": "../Home",
       "active": true,
       "port": 8083,
