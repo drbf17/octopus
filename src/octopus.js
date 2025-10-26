@@ -348,8 +348,13 @@ class Octopus {
         continue;
       }
 
-      // Usar yarn como padrão
-      const packageManager = 'yarn';
+      // Detectar se yarn está disponível, senão usar npm
+      let packageManager = 'yarn';
+      try {
+        await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
+      } catch (error) {
+        packageManager = 'npm';
+      }
 
       validRepos.push({ ...repo, repoPath, packageManager });
     }
@@ -427,9 +432,14 @@ class Octopus {
     console.log(chalk.blue('🐙 Iniciando servidores em terminal unificado...\n'));
 
     // Detectar package manager para cada repo
-    const commands = validRepos.map(repo => {
-      const packageManager = 'yarn';
-      const startCommand = 'yarn start';
+    const commands = await Promise.all(validRepos.map(async repo => {
+      let packageManager = 'yarn';
+      try {
+        await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
+      } catch (error) {
+        packageManager = 'npm';
+      }
+      const startCommand = packageManager === 'yarn' ? 'yarn start' : 'npm start';
       
       return {
         name: `${repo.name}:${repo.port}`,
@@ -437,7 +447,7 @@ class Octopus {
         cwd: repo.repoPath,
         prefixColor: this.getColorForRepo(repo.name)
       };
-    });
+    }));
 
     console.log(chalk.cyan('📋 Serviços que serão iniciados:'));
     commands.forEach(cmd => {
@@ -553,8 +563,14 @@ class Octopus {
         
         if (scripts.lint) {
           hasLint = true;
-          const hasYarnLock = fs.existsSync(path.join(repo.repoPath, 'yarn.lock'));
-          lintCommand = hasYarnLock ? 'yarn lint' : 'npm run lint';
+          // Detectar se yarn está disponível
+          let packageManager = 'yarn';
+          try {
+            await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
+          } catch (error) {
+            packageManager = 'npm';
+          }
+          lintCommand = packageManager === 'yarn' ? 'yarn lint' : 'npm run lint';
         }
       }
 
@@ -606,9 +622,15 @@ class Octopus {
         
         if (scripts.test && !scripts.test.includes('no test specified')) {
           hasTest = true;
-          const hasYarnLock = fs.existsSync(path.join(repo.repoPath, 'yarn.lock'));
+          // Detectar se yarn está disponível
+          let packageManager = 'yarn';
+          try {
+            await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
+          } catch (error) {
+            packageManager = 'npm';
+          }
           // Comando interativo para permitir watch mode se desejado
-          testCommand = hasYarnLock ? 'yarn test' : 'npm test';
+          testCommand = packageManager === 'yarn' ? 'yarn test' : 'npm test';
         }
       }
 
@@ -642,11 +664,21 @@ class Octopus {
     const validRepos = this.getValidRepos();
     if (validRepos.length === 0) return;
 
-    const commands = validRepos.map(repo => ({
-      command: 'yarn start',
-      name: repo.name,
-      cwd: repo.repoPath,
-      prefixColor: this.getColorForRepo(repo.name)
+    const commands = await Promise.all(validRepos.map(async repo => {
+      let packageManager = 'yarn';
+      try {
+        await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
+      } catch (error) {
+        packageManager = 'npm';
+      }
+      const startCommand = packageManager === 'yarn' ? 'yarn start' : 'npm start';
+      
+      return {
+        command: startCommand,
+        name: repo.name,
+        cwd: repo.repoPath,
+        prefixColor: this.getColorForRepo(repo.name)
+      };
     }));
 
     try {
@@ -1046,9 +1078,9 @@ class Octopus {
           terminalCommand = 'osascript';
           args = ['-e', appleScript];
         } else if (platform === 'win32') {
-          // Windows - melhorado
+          // Windows - usando & em vez de && para compatibilidade com cmd
           terminalCommand = 'cmd';
-          args = ['/c', 'start', 'cmd', '/k', `cd /d "${cwd}" && echo 🐙 ${name} - Iniciando... && ${command}`];
+          args = ['/c', 'start', 'cmd', '/k', `cd /d "${cwd}" & echo [OCTOPUS] ${name} - Iniciando... & ${command}`];
         } else {
           // Linux - tentar múltiplos terminais
           const terminals = [
