@@ -83,6 +83,13 @@ program
   });
 
 program
+  .command('update-sdk <version>')
+  .description('Update @drbf17/react-native-webview SDK version in all modules')
+  .action(async (version) => {
+    await octopus.updateSdk(version);
+  });
+
+program
   .command('status')
   .description('Show status of all repositories')
   .action(async () => {

@@ -750,6 +750,113 @@ class Octopus {
     }
   }
 
+  async updateSdk(version) {
+    console.log(chalk.blue(`🔄 Atualizando SDK @drbf17/react-native-webview para versão ${version}...\n`));
+    
+    const validRepos = this.getValidRepos();
+    if (validRepos.length === 0) return;
+
+    const { Listr } = require('listr2');
+    
+    const tasks = new Listr([
+      {
+        title: 'Atualizando package.json em todos os módulos',
+        task: async (ctx, task) => {
+          const subtasks = validRepos.map(repo => ({
+            title: `${repo.name}: Atualizando package.json`,
+            task: async (subCtx, subtask) => {
+              try {
+                const packageJsonPath = path.join(repo.repoPath, 'package.json');
+                
+                if (!fs.existsSync(packageJsonPath)) {
+                  subtask.skip(`package.json não encontrado`);
+                  return;
+                }
+
+                const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+                
+                // Verificar se a dependência existe
+                if (packageJson.dependencies && packageJson.dependencies['@drbf17/react-native-webview']) {
+                  const oldVersion = packageJson.dependencies['@drbf17/react-native-webview'];
+                  packageJson.dependencies['@drbf17/react-native-webview'] = `^${version}`;
+                  
+                  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
+                  subtask.title = `${repo.name}: ${oldVersion} → ^${version}`;
+                } else {
+                  subtask.skip('SDK não encontrado nas dependências');
+                }
+              } catch (error) {
+                throw new Error(`Erro ao atualizar ${repo.name}: ${error.message}`);
+              }
+            }
+          }));
+
+          return task.newListr(subtasks, { concurrent: true });
+        }
+      },
+      {
+        title: 'Executando comandos de instalação sequencialmente',
+        task: async (ctx, task) => {
+          const installTasks = [];
+          
+          for (const repo of validRepos) {
+            // Detectar package manager
+            let packageManager = 'yarn';
+            try {
+              await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
+            } catch (error) {
+              packageManager = 'npm';
+            }
+
+            const installCommand = packageManager === 'yarn' ? 'yarn' : 'npm';
+            const installArgs = packageManager === 'yarn' ? ['install'] : ['install'];
+            const fixCommand = packageManager === 'yarn' ? 'yarn' : 'npm';
+            const fixArgs = packageManager === 'yarn' ? ['fix-dependencies'] : ['run', 'fix-dependencies'];
+
+            installTasks.push({
+              title: `${repo.name}: ${packageManager} install (1ª vez)`,
+              task: async () => {
+                await this.runCommand(installCommand, installArgs, repo.repoPath, { timeout: 180000 });
+              }
+            });
+
+            installTasks.push({
+              title: `${repo.name}: ${packageManager} fix-dependencies`,
+              task: async () => {
+                try {
+                  await this.runCommand(fixCommand, fixArgs, repo.repoPath, { timeout: 180000 });
+                } catch (error) {
+                  // fix-dependencies pode não existir em alguns projetos, não é erro crítico
+                  console.log(chalk.yellow(`⚠️  ${repo.name}: fix-dependencies não disponível`));
+                }
+              }
+            });
+
+            installTasks.push({
+              title: `${repo.name}: ${packageManager} install (2ª vez)`,
+              task: async () => {
+                await this.runCommand(installCommand, installArgs, repo.repoPath, { timeout: 180000 });
+              }
+            });
+          }
+
+          return task.newListr(installTasks, { concurrent: false }); // Sequencial
+        }
+      }
+    ], {
+      showSubtasks: true,
+      showErrorMessage: true
+    });
+
+    try {
+      await tasks.run();
+      console.log(chalk.green(`\n✅ SDK @drbf17/react-native-webview atualizado para v${version} com sucesso!`));
+      console.log(chalk.blue('💡 Todos os módulos foram atualizados e dependências reinstaladas.'));
+    } catch (error) {
+      console.error(chalk.red(`\n❌ Erro durante atualização do SDK: ${error.message}`));
+    }
+  }
+
   async startWithConcurrently() {
     console.log(chalk.blue('🐙 Iniciando com Concurrently (modo paralelo)...\n'));
     

@@ -29,6 +29,7 @@ oct init
 | `oct test` | Testes em terminais separados por projeto |
 | `oct android` | 🤖 Build Android + logs em terminais separados |
 | `oct ios` | 🍎 Build iOS + logs em terminais separados |
+| `oct update-sdk <version>` | 🔄 Atualiza SDK @drbf17/react-native-webview em todos os módulos |
 | `oct checkout <branch>` | Checkout + pull em todos os repositórios |
 | `oct new-branch <name> [base]` | Cria nova branch em todos os repos |
 | `oct status` | Status Git de todos os repositórios |
@@ -57,6 +58,12 @@ oct start              # Inicia todos os servidores
 ```bash
 oct android            # 🤖 Abre 2 terminais: Build + Logs Android
 oct ios               # 🍎 Abre 2 terminais: Build + Logs iOS
+```
+
+### Atualização de SDK
+```bash
+oct update-sdk 0.3.0  # 🔄 Atualiza SDK em todos os módulos
+# ✅ Atualiza package.json → yarn install → yarn fix-dependencies → yarn install
 ```
 
 ### Nova feature
