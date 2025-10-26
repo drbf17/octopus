@@ -818,6 +818,72 @@ class Octopus {
           "bradlc.vscode-tailwindcss",
           "ms-vscode.vscode-json"
         ]
+      },
+      tasks: {
+        version: "2.0.0",
+        tasks: [
+          {
+            label: "🐙 Octopus - Start All",
+            type: "shell",
+            command: "oct",
+            args: ["start"],
+            group: "build",
+            presentation: {
+              echo: true,
+              reveal: "always",
+              focus: true,
+              panel: "dedicated",
+              showReuseMessage: false,
+              clear: true
+            },
+            problemMatcher: []
+          },
+          {
+            label: "🔍 Octopus - Lint All",
+            type: "shell", 
+            command: "oct",
+            args: ["lint"],
+            group: "test",
+            presentation: {
+              echo: true,
+              reveal: "always",
+              focus: false,
+              panel: "new",
+              showReuseMessage: false
+            },
+            problemMatcher: []
+          },
+          {
+            label: "🧪 Octopus - Test All",
+            type: "shell",
+            command: "oct", 
+            args: ["test"],
+            group: "test",
+            presentation: {
+              echo: true,
+              reveal: "always",
+              focus: false,
+              panel: "new",
+              showReuseMessage: false
+            },
+            problemMatcher: []
+          },
+          {
+            label: "📦 Octopus - Install All",
+            type: "shell",
+            command: "oct",
+            args: ["install"],
+            group: "build",
+            presentation: {
+              echo: true,
+              reveal: "always",
+              focus: true,
+              panel: "dedicated",
+              showReuseMessage: false
+            },
+            problemMatcher: []
+          }
+        ]
       }
     };
 
@@ -859,8 +925,54 @@ class Octopus {
     const workspaceFile = path.join(process.cwd(), `${this.config.projectName || 'octopus'}-workspace.code-workspace`);
     fs.writeFileSync(workspaceFile, JSON.stringify(workspaceConfig, null, 2));
 
+    // Criar keybindings sugeridos
+    await this.createVSCodeKeybindings();
+
     console.log(chalk.green(`✅ Workspace VS Code criado: ${path.basename(workspaceFile)}`));
     console.log(chalk.blue('💡 Abra o workspace: File > Open Workspace from File'));
+    console.log(chalk.blue('💡 Atalhos sugeridos criados em .vscode/keybindings.json'));
+  }
+
+  async createVSCodeKeybindings() {
+    const vscodeDir = path.join(process.cwd(), '.vscode');
+    const keybindingsFile = path.join(vscodeDir, 'keybindings.json');
+
+    // Criar diretório se não existir
+    if (!fs.existsSync(vscodeDir)) {
+      fs.mkdirSync(vscodeDir, { recursive: true });
+    }
+
+    const keybindings = [
+      {
+        key: "ctrl+shift+s",
+        command: "workbench.action.tasks.runTask",
+        args: "🐙 Octopus - Start All",
+        when: "!inDebugMode"
+      },
+      {
+        key: "ctrl+shift+l", 
+        command: "workbench.action.tasks.runTask",
+        args: "🔍 Octopus - Lint All"
+      },
+      {
+        key: "ctrl+shift+t",
+        command: "workbench.action.tasks.runTask", 
+        args: "🧪 Octopus - Test All"
+      },
+      {
+        key: "ctrl+shift+i",
+        command: "workbench.action.tasks.runTask",
+        args: "📦 Octopus - Install All"
+      }
+    ];
+
+    fs.writeFileSync(keybindingsFile, JSON.stringify(keybindings, null, 2));
+    
+    console.log(chalk.yellow('⌨️  Atalhos de teclado criados:'));
+    console.log(chalk.gray('   • Ctrl+Shift+S: Start All Services'));
+    console.log(chalk.gray('   • Ctrl+Shift+L: Lint All Projects'));
+    console.log(chalk.gray('   • Ctrl+Shift+T: Test All Projects'));
+    console.log(chalk.gray('   • Ctrl+Shift+I: Install All Dependencies'));
   }
 
   async runCommand(command, args, cwd, options = {}) {
