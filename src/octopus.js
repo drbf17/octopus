@@ -337,6 +337,157 @@ class Octopus {
 
     console.log(chalk.blue('🐙 Iniciando servidores de desenvolvimento...\n'));
 
+    const validRepos = [];
+    
+    // Validar repos primeiro
+    for (const repo of this.config.repositories) {
+      if (!repo.active) continue;
+
+      const repoPath = path.resolve(process.cwd(), repo.localPath);
+      
+      if (!fs.existsSync(repoPath)) {
+        console.log(chalk.yellow(`⚠️  ${repo.name} não encontrado em ${repoPath}`));
+        continue;
+      }
+
+      validRepos.push({ ...repo, repoPath });
+    }
+
+    if (validRepos.length === 0) {
+      console.log(chalk.yellow('⚠️  Nenhum repositório válido encontrado!'));
+      return;
+    }
+
+    // Iniciar cada repositório
+    for (const repo of validRepos) {
+      console.log(chalk.cyan(`🚀 Iniciando ${repo.name} na porta ${repo.port}`));
+
+      try {
+        await this.openTerminalImproved(repo.name, repo.repoPath, 'yarn start');
+      } catch (error) {
+        console.error(chalk.red(`⚠️  Erro ao abrir terminal para ${repo.name}: ${error.message}`));
+      }
+    }
+
+    console.log(chalk.green('\n🎉 Todos os servidores foram iniciados!'));
+    console.log(chalk.blue('💡 Cada repositório está rodando em seu próprio terminal.'));
+  }
+
+  async startWithConcurrently() {
+    console.log(chalk.blue('🐙 Iniciando com Concurrently (modo paralelo)...\n'));
+    
+    const validRepos = this.getValidRepos();
+    if (validRepos.length === 0) return;
+
+    const commands = validRepos.map(repo => ({
+      command: 'yarn start',
+      name: repo.name,
+      cwd: repo.repoPath,
+      prefixColor: this.getColorForRepo(repo.name)
+    }));
+
+    try {
+      const concurrently = require('concurrently');
+      const { result } = concurrently(
+        commands.map(cmd => ({
+          command: cmd.command,
+          name: cmd.name,
+          cwd: cmd.cwd,
+          prefixColor: cmd.prefixColor
+        })),
+        {
+          prefix: 'name',
+          killOthers: ['failure', 'success'],
+          restartTries: 3,
+          restartDelay: 1000
+        }
+      );
+
+      await result;
+    } catch (error) {
+      console.error(chalk.red('❌ Erro no modo concurrently:'), error.message);
+    }
+  }
+
+  async startWithPM2() {
+    console.log(chalk.blue('🐙 Iniciando com PM2 (modo daemon)...\n'));
+    
+    const validRepos = this.getValidRepos();
+    if (validRepos.length === 0) return;
+
+    // Criar ecosystem.config.js para PM2
+    const pm2Config = {
+      apps: validRepos.map(repo => ({
+        name: repo.name,
+        cwd: repo.repoPath,
+        script: 'yarn',
+        args: 'start',
+        env: {
+          PORT: repo.port,
+          NODE_ENV: 'development'
+        },
+        watch: false,
+        ignore_watch: ['node_modules', 'dist', 'build'],
+        restart_delay: 1000,
+        max_restarts: 10
+      }))
+    };
+
+    const ecosystemFile = path.join(process.cwd(), 'ecosystem.config.js');
+    fs.writeFileSync(ecosystemFile, `module.exports = ${JSON.stringify(pm2Config, null, 2)};`);
+
+    try {
+      await this.runCommand('npx', ['pm2', 'start', 'ecosystem.config.js'], process.cwd());
+      console.log(chalk.green('✅ PM2 ecosystem iniciado!'));
+      console.log(chalk.blue('💡 Use "npx pm2 list" para ver status'));
+      console.log(chalk.blue('💡 Use "npx pm2 stop all" para parar todos'));
+      console.log(chalk.blue('💡 Use "npx pm2 logs" para ver logs'));
+    } catch (error) {
+      console.error(chalk.red('❌ Erro ao iniciar PM2:'), error.message);
+    }
+  }
+
+  async startWithTmux() {
+    console.log(chalk.blue('🐙 Iniciando com Tmux (sessões organizadas)...\n'));
+    
+    const validRepos = this.getValidRepos();
+    if (validRepos.length === 0) return;
+
+    const sessionName = `octopus-${this.config.projectName || 'dev'}`;
+
+    try {
+      // Criar nova sessão tmux
+      await this.runCommand('tmux', ['new-session', '-d', '-s', sessionName], process.cwd());
+      
+      for (let i = 0; i < validRepos.length; i++) {
+        const repo = validRepos[i];
+        
+        if (i > 0) {
+          // Criar nova janela para repos adicionais
+          await this.runCommand('tmux', ['new-window', '-t', sessionName, '-n', repo.name], process.cwd());
+        } else {
+          // Renomear primeira janela
+          await this.runCommand('tmux', ['rename-window', '-t', sessionName, repo.name], process.cwd());
+        }
+        
+        // Navegar para diretório e iniciar comando
+        await this.runCommand('tmux', ['send-keys', '-t', `${sessionName}:${repo.name}`, `cd ${repo.repoPath}`, 'Enter'], process.cwd());
+        await this.runCommand('tmux', ['send-keys', '-t', `${sessionName}:${repo.name}`, 'yarn start', 'Enter'], process.cwd());
+      }
+
+      console.log(chalk.green(`✅ Sessão Tmux "${sessionName}" criada!`));
+      console.log(chalk.blue(`💡 Use "tmux attach -t ${sessionName}" para acessar`));
+      console.log(chalk.blue('💡 Use Ctrl+B, D para desanexar'));
+      console.log(chalk.blue('💡 Use Ctrl+B, W para navegar entre janelas'));
+    } catch (error) {
+      console.error(chalk.red('❌ Erro ao usar Tmux:'), error.message);
+      console.log(chalk.yellow('💡 Instale tmux: brew install tmux (macOS) ou apt install tmux (Linux)'));
+    }
+  }
+
+  async startWithTerminal() {
+    console.log(chalk.blue('🐙 Iniciando servidores de desenvolvimento...\n'));
+
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
@@ -353,7 +504,7 @@ class Octopus {
         // Abrir terminal separado para cada repo
         await this.openTerminal(repo.name, repoPath, 'yarn start');
       } catch (error) {
-        console.error(chalk.red(`❌ Erro ao iniciar ${repo.name}:`), error.message);
+        console.error(chalk.red(`⚠️  Erro ao abrir terminal para ${repo.name}: ${error.message}`));
       }
     }
 
@@ -651,13 +802,13 @@ class Octopus {
 
   async runCommand(command, args, cwd) {
     return new Promise((resolve, reject) => {
-      const process = spawn(command, args, {
+      const childProcess = spawn(command, args, {
         cwd: cwd,
         stdio: 'pipe',
         shell: true
       });
 
-      process.on('close', (code) => {
+      childProcess.on('close', (code) => {
         if (code === 0) {
           resolve();
         } else {
@@ -665,56 +816,96 @@ class Octopus {
         }
       });
 
-      process.on('error', reject);
+      childProcess.on('error', reject);
     });
   }
 
-  async openTerminal(name, cwd, command) {
-    return new Promise((resolve, reject) => {
+  async openTerminalImproved(name, cwd, command) {
+    return new Promise((resolve) => {
       try {
         const platform = process.platform;
         let terminalCommand;
         let args;
 
         if (platform === 'darwin') {
-          // macOS - usar AppleScript
+          // macOS - AppleScript melhorado com tratamento de erro
           const appleScript = `
             tell application "Terminal"
               activate
-              do script "cd '${cwd}' && echo '🐙 ${name} - Iniciando...' && ${command}"
+              set newTab to do script "cd '${cwd.replace(/'/g, "'\\''")}'"
+              delay 0.5
+              do script "echo '🐙 ${name} - Iniciando...' && ${command}" in newTab
             end tell
           `;
           terminalCommand = 'osascript';
           args = ['-e', appleScript];
         } else if (platform === 'win32') {
-          // Windows - usar cmd
+          // Windows - melhorado
           terminalCommand = 'cmd';
           args = ['/c', 'start', 'cmd', '/k', `cd /d "${cwd}" && echo 🐙 ${name} - Iniciando... && ${command}`];
         } else {
-          // Linux/outros - usar gnome-terminal ou xterm como fallback
-          terminalCommand = 'gnome-terminal';
-          args = ['--working-directory', cwd, '--', 'bash', '-c', `echo '🐙 ${name} - Iniciando...' && ${command}; exec bash`];
+          // Linux - tentar múltiplos terminais
+          const terminals = [
+            ['gnome-terminal', ['--working-directory', cwd, '--', 'bash', '-c', `echo '🐙 ${name} - Iniciando...' && ${command}; exec bash`]],
+            ['xterm', ['-e', `bash -c "cd '${cwd}' && echo '🐙 ${name} - Iniciando...' && ${command}; exec bash"`]],
+            ['konsole', ['--workdir', cwd, '-e', `bash -c "echo '🐙 ${name} - Iniciando...' && ${command}; exec bash"`]]
+          ];
+          
+          let terminalFound = false;
+          for (const [terminal, termArgs] of terminals) {
+            try {
+              terminalCommand = terminal;
+              args = termArgs;
+              terminalFound = true;
+              break;
+            } catch (e) {
+              continue;
+            }
+          }
+          
+          if (!terminalFound) {
+            console.warn(chalk.yellow(`⚠️  Nenhum terminal compatível encontrado para ${name}`));
+            resolve();
+            return;
+          }
         }
 
-        const process = spawn(terminalCommand, args, {
-          stdio: 'pipe',
-          shell: platform === 'win32' // Shell apenas no Windows
+        // Executar comando com timeout
+        const childProcess = spawn(terminalCommand, args, {
+          stdio: 'ignore', // Ignorar output para evitar problemas
+          detached: true,  // Processo independente
+          shell: platform === 'win32'
         });
 
-        process.on('close', (code) => {
-          resolve(); // Sempre resolve, pois falhas de terminal não devem parar o processo
+        // Timeout para não travar
+        const timeout = setTimeout(() => {
+          resolve();
+        }, 3000);
+
+        childProcess.on('spawn', () => {
+          clearTimeout(timeout);
+          resolve();
         });
 
-        process.on('error', (error) => {
-          console.warn(chalk.yellow(`⚠️  Não foi possível abrir terminal para ${name}: ${error.message}`));
-          resolve(); // Resolve mesmo com erro para não interromper outros repositórios
+        childProcess.on('error', (error) => {
+          clearTimeout(timeout);
+          console.warn(chalk.yellow(`⚠️  Erro ao abrir terminal para ${name}: ${error.message}`));
+          resolve();
         });
+
+        // Desanexar processo para não afetar o octopus
+        if (childProcess.pid) {
+          childProcess.unref();
+        }
+
       } catch (error) {
         console.warn(chalk.yellow(`⚠️  Erro ao abrir terminal para ${name}: ${error.message}`));
         resolve();
       }
     });
   }
+
+
 }
 
 module.exports = Octopus;
