@@ -437,17 +437,45 @@ class Octopus {
       folders: [],
       settings: {
         "typescript.preferences.includePackageJsonAutoImports": "auto",
-        "eslint.workingDirectories": []
+        "eslint.workingDirectories": [],
+        "files.exclude": {
+          "**/node_modules": true,
+          "**/.*": false
+        },
+        "search.exclude": {
+          "**/node_modules": true,
+          "**/yarn.lock": true,
+          "**/package-lock.json": true
+        },
+        "terminal.integrated.cwd": "."
       },
       extensions: {
         recommendations: [
           "ms-vscode.vscode-typescript-next",
           "esbenp.prettier-vscode",
           "ms-vscode.vscode-eslint",
-          "bradlc.vscode-tailwindcss"
+          "bradlc.vscode-tailwindcss",
+          "ms-vscode.vscode-json"
         ]
+      },
+      tasks: {
+        version: "2.0.0",
+        tasks: []
       }
     };
+
+    // Adicionar pasta raiz do projeto (onde ficam .vscode, workspace, etc)
+    workspaceConfig.folders.push({
+      name: "📁 Projeto Root",
+      path: "."
+    });
+
+    // Adicionar pasta do próprio Octopus
+    const octopusPath = path.relative(process.cwd(), path.resolve(__dirname, '..'));
+    workspaceConfig.folders.push({
+      name: "🐙 Octopus (CLI)",
+      path: octopusPath
+    });
 
     // Adicionar cada repositório como uma pasta do workspace
     for (const repo of this.config.repositories) {
@@ -467,12 +495,8 @@ class Octopus {
       }
     }
 
-    // Adicionar pasta do próprio Octopus
-    const octopusPath = path.relative(process.cwd(), __dirname + '/..');
-    workspaceConfig.folders.push({
-      name: "🐙 Octopus",
-      path: octopusPath
-    });
+    // Adicionar Octopus ao working directories do ESLint
+    workspaceConfig.settings["eslint.workingDirectories"].push(octopusPath);
 
     // Salvar arquivo de workspace
     const workspaceFile = path.join(process.cwd(), `${this.config.projectName || 'octopus'}-workspace.code-workspace`);
