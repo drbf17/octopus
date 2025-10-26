@@ -1,8 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const { execa } = require('execa');
 const chalk = require('chalk');
 const ora = require('ora');
+const { Listr } = require('listr2');
+const pLimit = require('p-limit');
 const inquirer = require('inquirer');
 const simpleGit = require('simple-git');
 
@@ -171,11 +174,10 @@ class Octopus {
       return;
     }
 
-    console.log(chalk.blue('🐙 Clonando repositórios...\n'));
-
-    // Usar diretório atual como base, não o diretório do octopus
     const parentDir = process.cwd();
+    const reposToClone = [];
 
+    // Filtrar repos que precisam ser clonados
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
@@ -184,18 +186,54 @@ class Octopus {
       if (fs.existsSync(repoPath)) {
         console.log(chalk.yellow(`⚠️  ${repo.name} já existe em ${repoPath}`));
         continue;
-      }      const spinner = ora(`Clonando ${repo.name}...`).start();
-
-      try {
-        const git = simpleGit(parentDir);
-        await git.clone(repo.url, repo.localPath);
-        spinner.succeed(chalk.green(`✅ ${repo.name} clonado com sucesso`));
-      } catch (error) {
-        spinner.fail(chalk.red(`❌ Erro ao clonar ${repo.name}: ${error.message}`));
       }
+
+      reposToClone.push(repo);
     }
 
-    console.log(chalk.green('\n🎉 Clonagem concluída!'));
+    if (reposToClone.length === 0) {
+      console.log(chalk.blue('🎉 Todos os repositórios já estão clonados!'));
+      return;
+    }
+
+    // Limitar concorrência para clones (Git pode ser pesado)
+    const limit = pLimit(2); // Max 2 clones simultâneos
+
+    const tasks = reposToClone.map(repo => ({
+      title: `Clonando: ${repo.name}`,
+      task: async (ctx, task) => {
+        return limit(async () => {
+          try {
+            task.output = `Clonando de ${repo.url}...`;
+            
+            const git = simpleGit(parentDir);
+            await git.clone(repo.url, repo.localPath);
+            
+            task.title = `✅ ${repo.name}: Clonado com sucesso`;
+          } catch (error) {
+            task.title = `❌ ${repo.name}: Falha no clone`;
+            throw new Error(`${repo.name}: ${error.message.split('\n')[0]}`);
+          }
+        });
+      }
+    }));
+
+    const listr = new Listr(tasks, {
+      concurrent: true,
+      exitOnError: false,
+      rendererOptions: {
+        showSubtasks: false,
+        showErrorMessage: true
+      }
+    });
+
+    try {
+      console.log(chalk.blue('🐙 Clonando repositórios...\n'));
+      await listr.run();
+      console.log(chalk.green('\n🎉 Clonagem concluída!'));
+    } catch (error) {
+      console.log(chalk.yellow('\n⚠️  Alguns repositórios falharam no clone. Verifique os logs acima.'));
+    }
   }
 
   async checkout(branch) {
@@ -272,8 +310,6 @@ class Octopus {
       return;
     }
 
-    console.log(chalk.blue('🐙 Instalando dependências em paralelo...\n'));
-
     // Preparar lista de repositórios válidos
     const validRepos = [];
     for (const repo of this.config.repositories) {
@@ -286,7 +322,12 @@ class Octopus {
         continue;
       }
 
-      validRepos.push({ ...repo, repoPath });
+      // Detectar package manager automaticamente
+      const hasYarnLock = fs.existsSync(path.join(repoPath, 'yarn.lock'));
+      const hasPackageLock = fs.existsSync(path.join(repoPath, 'package-lock.json'));
+      const packageManager = hasYarnLock ? 'yarn' : hasPackageLock ? 'npm' : 'yarn';
+
+      validRepos.push({ ...repo, repoPath, packageManager });
     }
 
     if (validRepos.length === 0) {
@@ -294,38 +335,50 @@ class Octopus {
       return;
     }
 
-    // Criar spinners para cada repositório
-    const spinners = {};
-    validRepos.forEach(repo => {
-      spinners[repo.name] = ora(`Instalando ${repo.name}...`).start();
-    });
+    // Limitar concorrência para evitar sobrecarregar o sistema
+    const limit = pLimit(3); // Max 3 instalações simultâneas
 
-    // Executar instalações em paralelo
-    const installPromises = validRepos.map(async (repo) => {
-      try {
-        await this.runCommand('yarn', ['install'], repo.repoPath);
-        spinners[repo.name].succeed(chalk.green(`✅ ${repo.name}: dependências instaladas`));
-        return { name: repo.name, success: true };
-      } catch (error) {
-        spinners[repo.name].fail(chalk.red(`❌ ${repo.name}: ${error.message}`));
-        return { name: repo.name, success: false, error: error.message };
+    // Criar tasks do Listr2 para melhor UX
+    const tasks = validRepos.map(repo => ({
+      title: `Instalando dependências: ${repo.name}`,
+      task: async (ctx, task) => {
+        return limit(async () => {
+          try {
+            task.output = `Usando ${repo.packageManager}...`;
+            
+            const installCommand = repo.packageManager === 'yarn' ? 'yarn' : 'npm';
+            const installArgs = repo.packageManager === 'yarn' ? ['install'] : ['install', '--silent'];
+            
+            await this.runCommand(installCommand, installArgs, repo.repoPath, {
+              timeout: 180000 // 3 minutos por repo
+            });
+            
+            task.title = `✅ ${repo.name}: Dependências instaladas`;
+            return { name: repo.name, success: true };
+          } catch (error) {
+            task.title = `❌ ${repo.name}: Falha na instalação`;
+            throw new Error(`${repo.name}: ${error.message.split('\n')[0]}`); // Primeira linha do erro
+          }
+        });
+      }
+    }));
+
+    const listr = new Listr(tasks, {
+      concurrent: true,
+      exitOnError: false,
+      rendererOptions: {
+        showSubtasks: false,
+        collapse: false,
+        showErrorMessage: true
       }
     });
 
-    // Aguardar todas as instalações
-    const results = await Promise.all(installPromises);
-    
-    // Mostrar resumo
-    const successful = results.filter(r => r.success).length;
-    const failed = results.filter(r => !r.success).length;
-    
-    console.log(chalk.green(`\n🎉 Instalação concluída: ${successful} sucessos, ${failed} falhas`));
-    
-    if (failed > 0) {
-      console.log(chalk.yellow('\n⚠️  Repositórios com falha:'));
-      results.filter(r => !r.success).forEach(r => {
-        console.log(chalk.red(`   - ${r.name}: ${r.error}`));
-      });
+    try {
+      console.log(chalk.blue('🐙 Instalando dependências...\n'));
+      await listr.run();
+      console.log(chalk.green('\n🎉 Instalação concluída!'));
+    } catch (error) {
+      console.log(chalk.yellow('\n⚠️  Algumas instalações falharam. Verifique os logs acima.'));
     }
   }
 
@@ -800,24 +853,27 @@ class Octopus {
     console.log(chalk.blue('💡 Abra o workspace: File > Open Workspace from File'));
   }
 
-  async runCommand(command, args, cwd) {
-    return new Promise((resolve, reject) => {
-      const childProcess = spawn(command, args, {
-        cwd: cwd,
-        stdio: 'pipe',
-        shell: true
+  async runCommand(command, args, cwd, options = {}) {
+    try {
+      const result = await execa(command, args, {
+        cwd,
+        shell: true,
+        timeout: options.timeout || 300000, // 5 minutos default
+        ...options
       });
-
-      childProcess.on('close', (code) => {
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`Command failed with code ${code}`));
-        }
-      });
-
-      childProcess.on('error', reject);
-    });
+      return result;
+    } catch (error) {
+      // Melhor tratamento de erro com informações detalhadas
+      const errorInfo = {
+        command: `${command} ${args.join(' ')}`,
+        cwd,
+        exitCode: error.exitCode,
+        stderr: error.stderr,
+        stdout: error.stdout
+      };
+      
+      throw new Error(`Command failed: ${errorInfo.command}\nExit code: ${errorInfo.exitCode}\nError: ${errorInfo.stderr || error.message}`);
+    }
   }
 
   async openTerminalImproved(name, cwd, command) {

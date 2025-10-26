@@ -11,10 +11,13 @@
   },
   "dependencies": {
     "chalk": "^4.1.2",
-    "ora": "^5.4.1",
+    "commander": "^9.4.1",
+    "execa": "^9.6.0",
     "inquirer": "^8.2.4",
-    "simple-git": "^3.19.1",
-    "commander": "^9.4.1"
+    "listr2": "^9.0.5",
+    "ora": "^5.4.1",
+    "p-limit": "^7.2.0",
+    "simple-git": "^3.19.1"
   },
   "keywords": [
     "microservices",
