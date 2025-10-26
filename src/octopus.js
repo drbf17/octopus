@@ -348,10 +348,8 @@ class Octopus {
         continue;
       }
 
-      // Detectar package manager automaticamente
-      const hasYarnLock = fs.existsSync(path.join(repoPath, 'yarn.lock'));
-      const hasPackageLock = fs.existsSync(path.join(repoPath, 'package-lock.json'));
-      const packageManager = hasYarnLock ? 'yarn' : hasPackageLock ? 'npm' : 'yarn';
+      // Usar yarn como padrão
+      const packageManager = 'yarn';
 
       validRepos.push({ ...repo, repoPath, packageManager });
     }
@@ -430,9 +428,8 @@ class Octopus {
 
     // Detectar package manager para cada repo
     const commands = validRepos.map(repo => {
-      const hasYarnLock = fs.existsSync(path.join(repo.repoPath, 'yarn.lock'));
-      const packageManager = hasYarnLock ? 'yarn' : 'npm';
-      const startCommand = packageManager === 'yarn' ? 'yarn start' : 'npm start';
+      const packageManager = 'yarn';
+      const startCommand = 'yarn start';
       
       return {
         name: `${repo.name}:${repo.port}`,
