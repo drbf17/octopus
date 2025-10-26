@@ -29,7 +29,7 @@ oct init
 | `oct test` | Testes em terminais separados por projeto |
 | `oct android` | 🤖 Build Android + logs em terminais separados |
 | `oct ios` | 🍎 Build iOS + logs em terminais separados |
-| `oct update-sdk <version>` | 🔄 Atualiza SDK @drbf17/react-native-webview em todos os módulos |
+| `oct update-sdk <version>` | 🔄 Atualiza SDK configurado em todos os módulos |
 | `oct checkout <branch>` | Checkout + pull em todos os repositórios |
 | `oct new-branch <name> [base]` | Cria nova branch em todos os repos |
 | `oct status` | Status Git de todos os repositórios |
@@ -99,6 +99,17 @@ meu-projeto/
 - **Inteligente**: detecta yarn/npm automaticamente
 - **Integrado**: gera workspace e tasks do VS Code
 - **Reutilizável**: facilmente adaptável para outros projetos
+
+### Configuração do SDK (`config/sdk-config.json`)
+```json
+{
+  "sdkDependency": "@drbf17/react-native-webview",
+  "updateCommands": {
+    "yarn": ["yarn install", "yarn fix-dependencies", "yarn install"],
+    "npm": ["npm install", "npm run fix-dependencies", "npm install"]
+  }
+}
+```
 
 ### Objetivos
 - Eliminar setup manual repetitivo de múltiplos repositórios

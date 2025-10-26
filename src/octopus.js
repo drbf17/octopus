@@ -348,13 +348,8 @@ class Octopus {
         continue;
       }
 
-      // Detectar se yarn está disponível, senão usar npm
-      let packageManager = 'yarn';
-      try {
-        await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
-      } catch (error) {
-        packageManager = 'npm';
-      }
+      // Usar yarn conforme política do octopus
+      const packageManager = 'yarn';
 
       validRepos.push({ ...repo, repoPath, packageManager });
     }
@@ -373,10 +368,10 @@ class Octopus {
       task: async (ctx, task) => {
         return limit(async () => {
           try {
-            task.output = `Usando ${repo.packageManager}...`;
+            task.output = `Usando yarn...`;
             
-            const installCommand = repo.packageManager === 'yarn' ? 'yarn' : 'npm';
-            const installArgs = repo.packageManager === 'yarn' ? ['install'] : ['install', '--silent'];
+            const installCommand = 'yarn';
+            const installArgs = ['install'];
             
             await this.runCommand(installCommand, installArgs, repo.repoPath, {
               timeout: 180000 // 3 minutos por repo
@@ -431,15 +426,9 @@ class Octopus {
   async startUnified(validRepos) {
     console.log(chalk.blue('🐙 Iniciando servidores em terminal unificado...\n'));
 
-    // Detectar package manager para cada repo
-    const commands = await Promise.all(validRepos.map(async repo => {
-      let packageManager = 'yarn';
-      try {
-        await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
-      } catch (error) {
-        packageManager = 'npm';
-      }
-      const startCommand = packageManager === 'yarn' ? 'yarn start' : 'npm start';
+    // Usar yarn conforme política do octopus
+    const commands = validRepos.map(repo => {
+      const startCommand = 'yarn start';
       
       return {
         name: `${repo.name}:${repo.port}`,
@@ -447,7 +436,7 @@ class Octopus {
         cwd: repo.repoPath,
         prefixColor: this.getColorForRepo(repo.name)
       };
-    }));
+    });
 
     console.log(chalk.cyan('📋 Serviços que serão iniciados:'));
     commands.forEach(cmd => {
@@ -563,14 +552,8 @@ class Octopus {
         
         if (scripts.lint) {
           hasLint = true;
-          // Detectar se yarn está disponível
-          let packageManager = 'yarn';
-          try {
-            await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
-          } catch (error) {
-            packageManager = 'npm';
-          }
-          lintCommand = packageManager === 'yarn' ? 'yarn lint' : 'npm run lint';
+          // Usar yarn conforme política do octopus
+          lintCommand = 'yarn lint';
         }
       }
 
@@ -622,15 +605,8 @@ class Octopus {
         
         if (scripts.test && !scripts.test.includes('no test specified')) {
           hasTest = true;
-          // Detectar se yarn está disponível
-          let packageManager = 'yarn';
-          try {
-            await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
-          } catch (error) {
-            packageManager = 'npm';
-          }
-          // Comando interativo para permitir watch mode se desejado
-          testCommand = packageManager === 'yarn' ? 'yarn test' : 'npm test';
+          // Usar yarn conforme política do octopus
+          testCommand = 'yarn test';
         }
       }
 
@@ -672,15 +648,8 @@ class Octopus {
     console.log(chalk.cyan(`📱 Executando Android no Host: ${hostRepo.name}`));
     
     try {
-      // Detectar se yarn está disponível
-      let packageManager = 'yarn';
-      try {
-        await this.runCommand('yarn', ['--version'], hostRepo.repoPath, { timeout: 5000 });
-      } catch (error) {
-        packageManager = 'npm';
-      }
-      
-      const androidCommand = packageManager === 'yarn' ? 'yarn android' : 'npm run android';
+      // Usar yarn conforme política do octopus
+      const androidCommand = 'yarn android';
       const logCommand = 'npx react-native log-android';
       
       // Abrir terminal para build Android
@@ -718,15 +687,8 @@ class Octopus {
     console.log(chalk.cyan(`📱 Executando iOS no Host: ${hostRepo.name}`));
     
     try {
-      // Detectar se yarn está disponível
-      let packageManager = 'yarn';
-      try {
-        await this.runCommand('yarn', ['--version'], hostRepo.repoPath, { timeout: 5000 });
-      } catch (error) {
-        packageManager = 'npm';
-      }
-      
-      const iosCommand = packageManager === 'yarn' ? 'yarn ios' : 'npm run ios';
+      // Usar yarn conforme política do octopus
+      const iosCommand = 'yarn ios';
       const logCommand = 'npx react-native log-ios';
       
       // Abrir terminal para build iOS
@@ -751,7 +713,25 @@ class Octopus {
   }
 
   async updateSdk(version) {
-    console.log(chalk.blue(`🔄 Atualizando SDK @drbf17/react-native-webview para versão ${version}...\n`));
+    // Carregar configuração do SDK
+    const sdkConfigPath = path.join(__dirname, '../config/sdk-config.json');
+    let sdkConfig;
+    
+    try {
+      sdkConfig = JSON.parse(fs.readFileSync(sdkConfigPath, 'utf8'));
+    } catch (error) {
+      console.log(chalk.red('❌ Erro ao carregar configuração do SDK. Usando padrão.'));
+      sdkConfig = {
+        sdkDependency: '@drbf17/react-native-webview',
+        updateCommands: {
+          yarn: ['yarn install', 'yarn fix-dependencies', 'yarn install'],
+          npm: ['npm install', 'npm run fix-dependencies', 'npm install']
+        }
+      };
+    }
+    
+    const sdkName = sdkConfig.sdkDependency;
+    console.log(chalk.blue(`🔄 Atualizando SDK ${sdkName} para versão ${version}...\n`));
     
     const validRepos = this.getValidRepos();
     if (validRepos.length === 0) return;
@@ -776,9 +756,9 @@ class Octopus {
                 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
                 
                 // Verificar se a dependência existe
-                if (packageJson.dependencies && packageJson.dependencies['@drbf17/react-native-webview']) {
-                  const oldVersion = packageJson.dependencies['@drbf17/react-native-webview'];
-                  packageJson.dependencies['@drbf17/react-native-webview'] = `^${version}`;
+                if (packageJson.dependencies && packageJson.dependencies[sdkName]) {
+                  const oldVersion = packageJson.dependencies[sdkName];
+                  packageJson.dependencies[sdkName] = `^${version}`;
                   
                   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
                   subtask.title = `${repo.name}: ${oldVersion} → ^${version}`;
@@ -800,43 +780,30 @@ class Octopus {
           const installTasks = [];
           
           for (const repo of validRepos) {
-            // Detectar package manager
-            let packageManager = 'yarn';
-            try {
-              await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
-            } catch (error) {
-              packageManager = 'npm';
-            }
+            // Usar apenas yarn conforme política do octopus
+            const commands = sdkConfig.updateCommands.yarn;
 
-            const installCommand = packageManager === 'yarn' ? 'yarn' : 'npm';
-            const installArgs = packageManager === 'yarn' ? ['install'] : ['install'];
-            const fixCommand = packageManager === 'yarn' ? 'yarn' : 'npm';
-            const fixArgs = packageManager === 'yarn' ? ['fix-dependencies'] : ['run', 'fix-dependencies'];
-
-            installTasks.push({
-              title: `${repo.name}: ${packageManager} install (1ª vez)`,
-              task: async () => {
-                await this.runCommand(installCommand, installArgs, repo.repoPath, { timeout: 180000 });
-              }
-            });
-
-            installTasks.push({
-              title: `${repo.name}: ${packageManager} fix-dependencies`,
-              task: async () => {
-                try {
-                  await this.runCommand(fixCommand, fixArgs, repo.repoPath, { timeout: 180000 });
-                } catch (error) {
-                  // fix-dependencies pode não existir em alguns projetos, não é erro crítico
-                  console.log(chalk.yellow(`⚠️  ${repo.name}: fix-dependencies não disponível`));
+            // Executar comandos da configuração sequencialmente
+            commands.forEach((cmd, index) => {
+              const cmdParts = cmd.split(' ');
+              const command = cmdParts[0];
+              const args = cmdParts.slice(1);
+              
+              installTasks.push({
+                title: `${repo.name}: ${cmd}`,
+                task: async () => {
+                  try {
+                    await this.runCommand(command, args, repo.repoPath, { timeout: 180000 });
+                  } catch (error) {
+                    if (cmd.includes('fix-dependencies')) {
+                      // fix-dependencies pode não existir, não é erro crítico
+                      console.log(chalk.yellow(`⚠️  ${repo.name}: ${cmd} não disponível`));
+                    } else {
+                      throw error;
+                    }
+                  }
                 }
-              }
-            });
-
-            installTasks.push({
-              title: `${repo.name}: ${packageManager} install (2ª vez)`,
-              task: async () => {
-                await this.runCommand(installCommand, installArgs, repo.repoPath, { timeout: 180000 });
-              }
+              });
             });
           }
 
@@ -850,7 +817,7 @@ class Octopus {
 
     try {
       await tasks.run();
-      console.log(chalk.green(`\n✅ SDK @drbf17/react-native-webview atualizado para v${version} com sucesso!`));
+      console.log(chalk.green(`\n✅ SDK ${sdkName} atualizado para v${version} com sucesso!`));
       console.log(chalk.blue('💡 Todos os módulos foram atualizados e dependências reinstaladas.'));
     } catch (error) {
       console.error(chalk.red(`\n❌ Erro durante atualização do SDK: ${error.message}`));
@@ -863,14 +830,8 @@ class Octopus {
     const validRepos = this.getValidRepos();
     if (validRepos.length === 0) return;
 
-    const commands = await Promise.all(validRepos.map(async repo => {
-      let packageManager = 'yarn';
-      try {
-        await this.runCommand('yarn', ['--version'], repo.repoPath, { timeout: 5000 });
-      } catch (error) {
-        packageManager = 'npm';
-      }
-      const startCommand = packageManager === 'yarn' ? 'yarn start' : 'npm start';
+    const commands = validRepos.map(repo => {
+      const startCommand = 'yarn start';
       
       return {
         command: startCommand,
@@ -878,7 +839,7 @@ class Octopus {
         cwd: repo.repoPath,
         prefixColor: this.getColorForRepo(repo.name)
       };
-    }));
+    });
 
     try {
       const concurrently = require('concurrently');

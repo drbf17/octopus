@@ -1,0 +1,16 @@
+{
+  "sdkDependency": "@drbf17/react-native-webview",
+  "description": "Configuração do SDK padrão para atualização nos módulos",
+  "updateCommands": {
+    "yarn": [
+      "yarn install",
+      "yarn fix-dependencies", 
+      "yarn install"
+    ]
+  },
+  "supportedVersionFormats": [
+    "^x.x.x",
+    "~x.x.x", 
+    "x.x.x"
+  ]
+}
