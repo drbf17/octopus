@@ -127,6 +127,20 @@ class Octopus {
 
     console.log(chalk.green(`\n✅ Configuração criada com ${selectedRepos.length} repositório(s)!`));
 
+    // Perguntar se deve clonar repositórios
+    const { shouldClone } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'shouldClone',
+        message: 'Clonar repositórios que ainda não existem?',
+        default: true
+      }
+    ]);
+
+    if (shouldClone) {
+      await this.clone();
+    }
+
     // Perguntar se deve instalar dependências
     const { shouldInstall } = await inquirer.prompt([
       {

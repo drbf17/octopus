@@ -25,7 +25,8 @@ oct init
 - 📝 Define nome do projeto para workspace
 - 📋 Apresenta lista de repositórios padrão
 - ✅ Permite seleção interativa no terminal
-- 📦 Instala dependências nos repos existentes
+- � Clona repositórios automaticamente
+- �📦 Instala dependências nos repos existentes
 - ⚙️ Cria configuração personalizada
 - 🔧 Gera tasks do VS Code automaticamente
 - 🗂️ Cria workspace VS Code com todos os repositórios
@@ -124,8 +125,10 @@ Cada repositório rodará em seu próprio terminal integrado! 🚀
 
 ### Primeira vez:
 ```bash
-oct init     # Configura e instala tudo
-oct clone    # Clona os repositórios que faltam
+oct init     # Configura, clona e instala tudo automaticamente!
+# ✅ Clone automático opcional
+# ✅ Instalação automática opcional  
+# ✅ Workspace VS Code criado
 ```
 
 ### Desenvolvimento diário:
