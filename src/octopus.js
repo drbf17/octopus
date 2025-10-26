@@ -5,9 +5,40 @@ const { execa } = require('execa');
 const chalk = require('chalk');
 const ora = require('ora');
 const { Listr } = require('listr2');
-const pLimit = require('p-limit');
 const inquirer = require('inquirer');
 const simpleGit = require('simple-git');
+
+// Implementação simples de limitador de concorrência
+function createLimit(concurrency) {
+  let running = 0;
+  const queue = [];
+
+  return function limit(fn) {
+    return new Promise((resolve, reject) => {
+      const execute = async () => {
+        running++;
+        try {
+          const result = await fn();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          running--;
+          if (queue.length > 0 && running < concurrency) {
+            const next = queue.shift();
+            next();
+          }
+        }
+      };
+
+      if (running < concurrency) {
+        execute();
+      } else {
+        queue.push(execute);
+      }
+    });
+  };
+}
 
 class Octopus {
   constructor() {
@@ -192,7 +223,7 @@ class Octopus {
     }
 
     // Limitar concorrência para clones (Git pode ser pesado)
-    const limit = pLimit(2); // Max 2 clones simultâneos
+    const limit = createLimit(2); // Max 2 clones simultâneos
 
     const tasks = reposToClone.map(repo => ({
       title: `Clonando: ${repo.name}`,
@@ -331,7 +362,7 @@ class Octopus {
     }
 
     // Limitar concorrência para evitar sobrecarregar o sistema
-    const limit = pLimit(3); // Max 3 instalações simultâneas
+    const limit = createLimit(3); // Max 3 instalações simultâneas
 
     // Criar tasks do Listr2 para melhor UX
     const tasks = validRepos.map(repo => ({
