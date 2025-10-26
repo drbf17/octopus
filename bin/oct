@@ -56,14 +56,14 @@ program
 
 program
   .command('lint')
-  .description('Run lint sequentially in all repositories')
+  .description('Run lint in separate terminals for each repository')
   .action(async () => {
     await octopus.lint();
   });
 
 program
   .command('test')
-  .description('Run tests sequentially in all repositories')
+  .description('Run tests in separate terminals for each repository')
   .action(async () => {
     await octopus.test();
   });
