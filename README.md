@@ -22,11 +22,13 @@ yarn link  # Para usar o comando 'oct' globalmente
 ```bash
 oct init
 ```
-- Apresenta lista de repositórios padrão
-- Permite seleção interativa no terminal
-- Instala dependências nos repos existentes
-- Cria configuração personalizada
-- Gera tasks do VS Code automaticamente
+- 📝 Define nome do projeto para workspace
+- 📋 Apresenta lista de repositórios padrão
+- ✅ Permite seleção interativa no terminal
+- 📦 Instala dependências nos repos existentes
+- ⚙️ Cria configuração personalizada
+- 🔧 Gera tasks do VS Code automaticamente
+- 🗂️ Cria workspace VS Code com todos os repositórios
 
 ### 📥 Clonagem
 ```bash
@@ -103,11 +105,18 @@ O arquivo `config/default-repos.json` contém:
 
 ## 🖥️ Integração VS Code
 
-Após `oct init`, você pode usar:
+Após `oct init`, você terá:
 
+### 📋 **Tasks Automatizadas**
 1. **Cmd+Shift+P** (macOS) ou **Ctrl+Shift+P** (Windows/Linux)
 2. Digite **"Tasks: Run Task"**
 3. Selecione **"Octopus - Start All"**
+
+### 🗂️ **Workspace Completo**
+- Arquivo `[projeto]-workspace.code-workspace` gerado automaticamente
+- **File > Open Workspace from File** para abrir
+- Todos os repositórios organizados em um workspace
+- Configurações otimizadas para desenvolvimento
 
 Cada repositório rodará em seu próprio terminal integrado! 🚀
 

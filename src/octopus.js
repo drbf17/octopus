@@ -72,8 +72,19 @@ class Octopus {
       }
     }
 
+    // Perguntar nome do projeto
+    const { projectName } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'projectName',
+        message: 'Nome do projeto (para workspace VS Code):',
+        default: path.basename(process.cwd()),
+        validate: (input) => input.trim().length > 0 || 'Nome do projeto é obrigatório'
+      }
+    ]);
+
     // Mostrar lista de repos disponíveis
-    console.log(chalk.cyan('📋 Repositórios disponíveis:\n'));
+    console.log(chalk.cyan('\n📋 Repositórios disponíveis:\n'));
     
     const choices = this.defaultRepos.repositories.map(repo => ({
       name: `${repo.name} - ${repo.description} (porta: ${repo.port})`,
@@ -103,6 +114,7 @@ class Octopus {
 
     // Criar configuração
     const config = {
+      projectName: projectName.trim(),
       repositories: selectedRepoObjects.map(repo => ({...repo, active: true})),
       settings: {...this.defaultRepos.settings},
       createdAt: new Date().toISOString(),
@@ -131,6 +143,9 @@ class Octopus {
 
     // Criar tasks do VS Code
     await this.createVSCodeTasks();
+
+    // Criar workspace VS Code
+    await this.createVSCodeWorkspace();
 
     console.log(chalk.blue('\n🎉 Octopus configurado com sucesso!'));
     console.log(chalk.gray('Use "oct --help" para ver todos os comandos disponíveis.'));
@@ -395,6 +410,62 @@ class Octopus {
     fs.writeFileSync(this.tasksFile, JSON.stringify(tasksConfig, null, 2));
     console.log(chalk.green('✅ Tasks do VS Code criadas!'));
     console.log(chalk.blue('💡 Use Cmd+Shift+P > "Tasks: Run Task" > "Octopus - Start All"'));
+  }
+
+  async createVSCodeWorkspace() {
+    if (!this.config) {
+      console.log(chalk.red('❌ Execute "oct init" primeiro!'));
+      return;
+    }
+
+    // Criar estrutura do workspace
+    const workspaceConfig = {
+      folders: [],
+      settings: {
+        "typescript.preferences.includePackageJsonAutoImports": "auto",
+        "eslint.workingDirectories": []
+      },
+      extensions: {
+        recommendations: [
+          "ms-vscode.vscode-typescript-next",
+          "esbenp.prettier-vscode",
+          "ms-vscode.vscode-eslint",
+          "bradlc.vscode-tailwindcss"
+        ]
+      }
+    };
+
+    // Adicionar cada repositório como uma pasta do workspace
+    for (const repo of this.config.repositories) {
+      if (!repo.active) continue;
+
+      const repoPath = path.resolve(process.cwd(), repo.localPath);
+      const relativePath = path.relative(process.cwd(), repoPath);
+      
+      workspaceConfig.folders.push({
+        name: `${repo.name} (${repo.port})`,
+        path: relativePath
+      });
+
+      // Adicionar ao working directories do ESLint se o diretório existir
+      if (fs.existsSync(repoPath)) {
+        workspaceConfig.settings["eslint.workingDirectories"].push(relativePath);
+      }
+    }
+
+    // Adicionar pasta do próprio Octopus
+    const octopusPath = path.relative(process.cwd(), __dirname + '/..');
+    workspaceConfig.folders.push({
+      name: "🐙 Octopus",
+      path: octopusPath
+    });
+
+    // Salvar arquivo de workspace
+    const workspaceFile = path.join(process.cwd(), `${this.config.projectName || 'octopus'}-workspace.code-workspace`);
+    fs.writeFileSync(workspaceFile, JSON.stringify(workspaceConfig, null, 2));
+
+    console.log(chalk.green(`✅ Workspace VS Code criado: ${path.basename(workspaceFile)}`));
+    console.log(chalk.blue('💡 Abra o workspace: File > Open Workspace from File'));
   }
 
   async runCommand(command, args, cwd) {
