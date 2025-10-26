@@ -500,6 +500,135 @@ class Octopus {
     return colors[index % colors.length];
   }
 
+  async lint() {
+    if (!this.config) {
+      console.log(chalk.red('❌ Execute "oct init" primeiro!'));
+      return;
+    }
+
+    const validRepos = this.getValidRepos();
+    if (validRepos.length === 0) return;
+
+    console.log(chalk.blue('🐙 Executando lint em todos os projetos...\n'));
+
+    const tasks = validRepos.map(repo => ({
+      title: `Lint: ${repo.name}`,
+      task: async (ctx, task) => {
+        try {
+          task.output = `Verificando código...`;
+          
+          // Detectar se o projeto tem lint configurado
+          const packageJsonPath = path.join(repo.repoPath, 'package.json');
+          let lintCommand = 'yarn lint';
+          
+          if (fs.existsSync(packageJsonPath)) {
+            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+            const scripts = packageJson.scripts || {};
+            
+            if (scripts.lint) {
+              const hasYarnLock = fs.existsSync(path.join(repo.repoPath, 'yarn.lock'));
+              lintCommand = hasYarnLock ? 'yarn lint' : 'npm run lint';
+            } else {
+              task.skip(`Sem script de lint configurado`);
+              return;
+            }
+          }
+          
+          await this.runCommand(lintCommand.split(' ')[0], lintCommand.split(' ').slice(1), repo.repoPath, {
+            timeout: 120000 // 2 minutos por lint
+          });
+          
+          task.title = `✅ ${repo.name}: Lint passou`;
+        } catch (error) {
+          task.title = `❌ ${repo.name}: Lint falhou`;
+          throw new Error(`${repo.name}: ${error.message.split('\n')[0]}`);
+        }
+      }
+    }));
+
+    const listr = new Listr(tasks, {
+      concurrent: false, // Sequencial
+      exitOnError: false,
+      rendererOptions: {
+        showSubtasks: false,
+        showErrorMessage: true,
+        collapse: false
+      }
+    });
+
+    try {
+      await listr.run();
+      console.log(chalk.green('\n🎉 Lint concluído em todos os projetos!'));
+    } catch (error) {
+      console.log(chalk.yellow('\n⚠️  Alguns projetos falharam no lint. Verifique os erros acima.'));
+    }
+  }
+
+  async test() {
+    if (!this.config) {
+      console.log(chalk.red('❌ Execute "oct init" primeiro!'));
+      return;
+    }
+
+    const validRepos = this.getValidRepos();
+    if (validRepos.length === 0) return;
+
+    console.log(chalk.blue('🐙 Executando testes em todos os projetos...\n'));
+
+    const tasks = validRepos.map(repo => ({
+      title: `Testes: ${repo.name}`,
+      task: async (ctx, task) => {
+        try {
+          task.output = `Executando testes...`;
+          
+          // Detectar se o projeto tem testes configurados
+          const packageJsonPath = path.join(repo.repoPath, 'package.json');
+          let testCommand = 'yarn test';
+          
+          if (fs.existsSync(packageJsonPath)) {
+            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+            const scripts = packageJson.scripts || {};
+            
+            if (scripts.test && !scripts.test.includes('no test specified')) {
+              const hasYarnLock = fs.existsSync(path.join(repo.repoPath, 'yarn.lock'));
+              // Adicionar flags para execução não-interativa
+              testCommand = hasYarnLock ? 'yarn test --watchAll=false --ci' : 'npm test -- --watchAll=false --ci';
+            } else {
+              task.skip(`Sem testes configurados ou disponíveis`);
+              return;
+            }
+          }
+          
+          await this.runCommand(testCommand.split(' ')[0], testCommand.split(' ').slice(1), repo.repoPath, {
+            timeout: 300000 // 5 minutos por teste
+          });
+          
+          task.title = `✅ ${repo.name}: Testes passaram`;
+        } catch (error) {
+          task.title = `❌ ${repo.name}: Testes falharam`;
+          throw new Error(`${repo.name}: ${error.message.split('\n')[0]}`);
+        }
+      }
+    }));
+
+    const listr = new Listr(tasks, {
+      concurrent: false, // Sequencial
+      exitOnError: false,
+      rendererOptions: {
+        showSubtasks: false,
+        showErrorMessage: true,
+        collapse: false
+      }
+    });
+
+    try {
+      await listr.run();
+      console.log(chalk.green('\n🎉 Testes concluídos em todos os projetos!'));
+    } catch (error) {
+      console.log(chalk.yellow('\n⚠️  Alguns testes falharam. Verifique os erros acima.'));
+    }
+  }
+
   async startWithConcurrently() {
     console.log(chalk.blue('🐙 Iniciando com Concurrently (modo paralelo)...\n'));
     

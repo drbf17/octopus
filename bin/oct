@@ -55,6 +55,20 @@ program
   });
 
 program
+  .command('lint')
+  .description('Run lint sequentially in all repositories')
+  .action(async () => {
+    await octopus.lint();
+  });
+
+program
+  .command('test')
+  .description('Run tests sequentially in all repositories')
+  .action(async () => {
+    await octopus.test();
+  });
+
+program
   .command('status')
   .description('Show status of all repositories')
   .action(async () => {
