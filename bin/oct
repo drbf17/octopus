@@ -67,4 +67,18 @@ program
     await octopus.list();
   });
 
+program
+  .command('android')
+  .description('Run Android on Host repository (yarn android)')
+  .action(async () => {
+    await octopus.android();
+  });
+
+program
+  .command('ios')
+  .description('Run iOS on Host repository (pod install + yarn ios)')
+  .action(async () => {
+    await octopus.ios();
+  });
+
 program.parse();

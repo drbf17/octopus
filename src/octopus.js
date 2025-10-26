@@ -572,6 +572,84 @@ class Octopus {
       }
     });
   }
+
+  async android() {
+    if (!this.config) {
+      console.log(chalk.red('❌ Execute "oct init" primeiro!'));
+      return;
+    }
+
+    // Encontrar o repositório Host
+    const hostRepo = this.config.repositories.find(repo => repo.isHost && repo.active);
+    
+    if (!hostRepo) {
+      console.log(chalk.red('❌ Repositório Host não encontrado ou não ativo!'));
+      console.log(chalk.yellow('💡 Verifique se existe um repositório com "isHost": true na configuração.'));
+      return;
+    }
+
+    const repoPath = path.resolve(process.cwd(), hostRepo.localPath);
+    
+    if (!fs.existsSync(repoPath)) {
+      console.log(chalk.red(`❌ Repositório ${hostRepo.name} não encontrado em ${repoPath}`));
+      console.log(chalk.blue('💡 Execute "oct clone" primeiro.'));
+      return;
+    }
+
+    console.log(chalk.cyan(`🤖 Executando Android no ${hostRepo.name}...`));
+
+    try {
+      await this.openTerminal(`${hostRepo.name} - Android`, repoPath, 'yarn android');
+      console.log(chalk.green('✅ Android iniciado com sucesso!'));
+    } catch (error) {
+      console.error(chalk.red(`❌ Erro ao iniciar Android: ${error.message}`));
+    }
+  }
+
+  async ios() {
+    if (!this.config) {
+      console.log(chalk.red('❌ Execute "oct init" primeiro!'));
+      return;
+    }
+
+    // Encontrar o repositório Host
+    const hostRepo = this.config.repositories.find(repo => repo.isHost && repo.active);
+    
+    if (!hostRepo) {
+      console.log(chalk.red('❌ Repositório Host não encontrado ou não ativo!'));
+      console.log(chalk.yellow('💡 Verifique se existe um repositório com "isHost": true na configuração.'));
+      return;
+    }
+
+    const repoPath = path.resolve(process.cwd(), hostRepo.localPath);
+    
+    if (!fs.existsSync(repoPath)) {
+      console.log(chalk.red(`❌ Repositório ${hostRepo.name} não encontrado em ${repoPath}`));
+      console.log(chalk.blue('💡 Execute "oct clone" primeiro.'));
+      return;
+    }
+
+    console.log(chalk.cyan(`🍎 Executando iOS no ${hostRepo.name}...`));
+    console.log(chalk.blue('📦 Primeiro executando pod install...'));
+
+    try {
+      // Primeiro executar pod install no diretório ios
+      const iosPath = path.join(repoPath, 'ios');
+      if (fs.existsSync(iosPath)) {
+        console.log(chalk.gray('⏳ Instalando pods...'));
+        await this.runCommand('pod', ['install'], iosPath);
+        console.log(chalk.green('✅ Pod install concluído!'));
+      } else {
+        console.log(chalk.yellow('⚠️ Pasta ios não encontrada, pulando pod install'));
+      }
+
+      // Depois executar yarn ios
+      await this.openTerminal(`${hostRepo.name} - iOS`, repoPath, 'yarn ios');
+      console.log(chalk.green('✅ iOS iniciado com sucesso!'));
+    } catch (error) {
+      console.error(chalk.red(`❌ Erro ao iniciar iOS: ${error.message}`));
+    }
+  }
 }
 
 module.exports = Octopus;
