@@ -46,14 +46,10 @@ oct checkout <branch>           # Checkout + pull em todos
 oct new-branch <name> [base]    # Nova branch em todos
 oct status                      # Status de todos os repositórios
 
-# Desenvolvimento Web  
+# Desenvolvimento  
 oct clone                       # Clona repos em falta
 oct install                     # yarn install em todos
 oct start                       # Inicia todos em terminais separados
-
-# Desenvolvimento Mobile (Host App)
-oct android                     # Executa yarn android no Host
-oct ios                         # Executa pod install + yarn ios no Host
 ```
 
 ## 🖥️ Integração VS Code
@@ -68,12 +64,18 @@ Após `oct init`, você terá:
 
 **Para usar:** `File > Open Workspace from File`
 
-### ⚡ **Tasks Integradas**
-1. **Cmd+Shift+P** (macOS) ou **Ctrl+Shift+P** (Windows/Linux)
-2. Digite **"Tasks: Run Task"**
-3. Selecione **"Octopus - Start All"**
+### ⚡ **Tasks Automáticas**
 
-Cada repositório roda em seu próprio terminal! 🚀
+**Acesso:** `Cmd+Shift+P` → `Tasks: Run Task`
+
+**Tasks Disponíveis:**
+- 🚀 **Octopus - Start All** - Inicia todos os servidores
+- 🔍 **Octopus - Lint All** - ESLint em todos os repositórios  
+- 🧪 **Octopus - Test All** - Testes com cobertura em todos
+- 🤖 **Host - Android** - Executa app no Android (só no Host)
+- 🍎 **Host - iOS** - Pod install + executa no iOS (só no Host)
+
+Cada repositório roda em terminal dedicado! 🚀
 
 ## 📁 Estrutura Gerada
 
@@ -133,7 +135,7 @@ cd /novo-projeto && oct init
 
 ### Configuração do Host (para Mobile)
 
-Para usar `oct android` e `oct ios`, marque o repositório principal como Host:
+Para usar tasks Android e iOS, marque o repositório principal como Host:
 
 ```json
 {
@@ -143,7 +145,7 @@ Para usar `oct android` e `oct ios`, marque o repositório principal como Host:
   "active": true,
   "port": 8081,
   "priority": 1,
-  "isHost": true,                    // ✨ Campo especial para Host
+  "isHost": true,                    // ✨ Gera tasks Android/iOS
   "description": "Host application"
 }
 ```
@@ -160,20 +162,18 @@ oct init     # Configura tudo automaticamente
 
 ### Desenvolvimento diário:
 
-**Web Development:**
 ```bash
 oct checkout develop    # Atualiza todos para develop
-oct start              # Inicia todos os servidores web
-# Use workspace VS Code para navegar entre repos
+oct start              # Inicia todos os servidores
+# Use VS Code Tasks para mobile, lint, testes
 ```
 
-**Mobile Development:**
-```bash
-oct checkout develop    # Atualiza todos para develop  
-oct start              # Inicia servidores web (Metro bundlers)
-oct android            # Executa no Android (Host app)
-oct ios                # Executa no iOS (Host app)
-```
+**Tasks VS Code para desenvolvimento:**
+- 🚀 `Octopus - Start All` → Todos os servidores
+- 🤖 `Host - Android` → App no Android  
+- 🍎 `Host - iOS` → App no iOS (com pod install)
+- 🔍 `Octopus - Lint All` → Lint em todos
+- 🧪 `Octopus - Test All` → Testes com cobertura
 
 ### Nova feature:
 ```bash

@@ -379,13 +379,18 @@ class Octopus {
       tasks: []
     };
 
+    const startTaskLabels = [];
+    const lintTaskLabels = [];
+    const testTaskLabels = [];
+
     // Criar task individual para cada repo
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
       const repoPath = path.resolve(process.cwd(), repo.localPath);
       
-      const task = {
+      // Task de start
+      const startTask = {
         label: `${repo.name} - start`,
         type: "shell",
         command: "yarn start",
@@ -404,17 +409,123 @@ class Octopus {
         problemMatcher: []
       };
 
-      tasksConfig.tasks.push(task);
+      tasksConfig.tasks.push(startTask);
+      startTaskLabels.push(startTask.label);
+
+      // Task de lint
+      const lintTask = {
+        label: `${repo.name} - lint`,
+        type: "shell",
+        command: "yarn lint",
+        options: {
+          cwd: repoPath
+        },
+        group: "test",
+        presentation: {
+          echo: true,
+          reveal: "always",
+          focus: false,
+          panel: "new",
+          showReuseMessage: true,
+          clear: false
+        },
+        problemMatcher: ["$eslint-stylish"]
+      };
+
+      tasksConfig.tasks.push(lintTask);
+      lintTaskLabels.push(lintTask.label);
+
+      // Task de test
+      const testTask = {
+        label: `${repo.name} - test`,
+        type: "shell",
+        command: "yarn test --coverage",
+        options: {
+          cwd: repoPath
+        },
+        group: "test",
+        presentation: {
+          echo: true,
+          reveal: "always",
+          focus: false,
+          panel: "new",
+          showReuseMessage: true,
+          clear: false
+        },
+        problemMatcher: []
+      };
+
+      tasksConfig.tasks.push(testTask);
+      testTaskLabels.push(testTask.label);
+
+      // Tasks específicas do Host (Android e iOS)
+      if (repo.isHost) {
+        // Task Android
+        const androidTask = {
+          label: `${repo.name} - Android`,
+          type: "shell",
+          command: "yarn android",
+          options: {
+            cwd: repoPath
+          },
+          group: "build",
+          presentation: {
+            echo: true,
+            reveal: "always",
+            focus: true,
+            panel: "new",
+            showReuseMessage: true,
+            clear: false
+          },
+          problemMatcher: []
+        };
+
+        tasksConfig.tasks.push(androidTask);
+
+        // Task iOS (com pod install)
+        const iosTask = {
+          label: `${repo.name} - iOS`,
+          type: "shell",
+          command: "cd ios && pod install && cd .. && yarn ios",
+          options: {
+            cwd: repoPath
+          },
+          group: "build",
+          presentation: {
+            echo: true,
+            reveal: "always",
+            focus: true,
+            panel: "new",
+            showReuseMessage: true,
+            clear: false
+          },
+          problemMatcher: []
+        };
+
+        tasksConfig.tasks.push(iosTask);
+      }
     }
 
-    // Criar task composta
-    const compoundTask = {
-      label: "Octopus - Start All",
-      dependsOrder: "parallel",
-      dependsOn: tasksConfig.tasks.map(task => task.label)
-    };
+    // Tasks compostas
+    const compoundTasks = [
+      {
+        label: "Octopus - Start All",
+        dependsOrder: "parallel",
+        dependsOn: startTaskLabels
+      },
+      {
+        label: "Octopus - Lint All",
+        dependsOrder: "parallel", 
+        dependsOn: lintTaskLabels
+      },
+      {
+        label: "Octopus - Test All",
+        dependsOrder: "parallel",
+        dependsOn: testTaskLabels
+      }
+    ];
 
-    tasksConfig.tasks.push(compoundTask);
+    tasksConfig.tasks.push(...compoundTasks);
 
     // Salvar tasks.json
     if (!fs.existsSync(this.vscodeDir)) {
@@ -571,84 +682,6 @@ class Octopus {
         resolve();
       }
     });
-  }
-
-  async android() {
-    if (!this.config) {
-      console.log(chalk.red('❌ Execute "oct init" primeiro!'));
-      return;
-    }
-
-    // Encontrar o repositório Host
-    const hostRepo = this.config.repositories.find(repo => repo.isHost && repo.active);
-    
-    if (!hostRepo) {
-      console.log(chalk.red('❌ Repositório Host não encontrado ou não ativo!'));
-      console.log(chalk.yellow('💡 Verifique se existe um repositório com "isHost": true na configuração.'));
-      return;
-    }
-
-    const repoPath = path.resolve(process.cwd(), hostRepo.localPath);
-    
-    if (!fs.existsSync(repoPath)) {
-      console.log(chalk.red(`❌ Repositório ${hostRepo.name} não encontrado em ${repoPath}`));
-      console.log(chalk.blue('💡 Execute "oct clone" primeiro.'));
-      return;
-    }
-
-    console.log(chalk.cyan(`🤖 Executando Android no ${hostRepo.name}...`));
-
-    try {
-      await this.openTerminal(`${hostRepo.name} - Android`, repoPath, 'yarn android');
-      console.log(chalk.green('✅ Android iniciado com sucesso!'));
-    } catch (error) {
-      console.error(chalk.red(`❌ Erro ao iniciar Android: ${error.message}`));
-    }
-  }
-
-  async ios() {
-    if (!this.config) {
-      console.log(chalk.red('❌ Execute "oct init" primeiro!'));
-      return;
-    }
-
-    // Encontrar o repositório Host
-    const hostRepo = this.config.repositories.find(repo => repo.isHost && repo.active);
-    
-    if (!hostRepo) {
-      console.log(chalk.red('❌ Repositório Host não encontrado ou não ativo!'));
-      console.log(chalk.yellow('💡 Verifique se existe um repositório com "isHost": true na configuração.'));
-      return;
-    }
-
-    const repoPath = path.resolve(process.cwd(), hostRepo.localPath);
-    
-    if (!fs.existsSync(repoPath)) {
-      console.log(chalk.red(`❌ Repositório ${hostRepo.name} não encontrado em ${repoPath}`));
-      console.log(chalk.blue('💡 Execute "oct clone" primeiro.'));
-      return;
-    }
-
-    console.log(chalk.cyan(`🍎 Executando iOS no ${hostRepo.name}...`));
-    console.log(chalk.blue('📦 Primeiro executando pod install...'));
-
-    try {
-      // Primeiro executar pod install no diretório ios
-      const iosPath = path.join(repoPath, 'ios');
-      if (fs.existsSync(iosPath)) {
-        console.log(chalk.gray('⏳ Instalando pods...'));
-        await this.runCommand('pod', ['install'], iosPath);
-        console.log(chalk.green('✅ Pod install concluído!'));
-      } else {
-        console.log(chalk.yellow('⚠️ Pasta ios não encontrada, pulando pod install'));
-      }
-
-      // Depois executar yarn ios
-      await this.openTerminal(`${hostRepo.name} - iOS`, repoPath, 'yarn ios');
-      console.log(chalk.green('✅ iOS iniciado com sucesso!'));
-    } catch (error) {
-      console.error(chalk.red(`❌ Erro ao iniciar iOS: ${error.message}`));
-    }
   }
 }
 
