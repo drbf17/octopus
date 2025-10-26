@@ -27,6 +27,8 @@ oct init
 | `oct start` | Inicia todos os servidores em terminais separados |
 | `oct lint` | Lint em terminais separados por projeto |
 | `oct test` | Testes em terminais separados por projeto |
+| `oct android` | 🤖 Build Android + logs em terminais separados |
+| `oct ios` | 🍎 Build iOS + logs em terminais separados |
 | `oct checkout <branch>` | Checkout + pull em todos os repositórios |
 | `oct new-branch <name> [base]` | Cria nova branch em todos os repos |
 | `oct status` | Status Git de todos os repositórios |
@@ -49,6 +51,12 @@ oct init
 oct checkout develop    # Atualiza todos para develop
 oct start              # Inicia todos os servidores
 # Use VS Code Tasks: Cmd+Shift+P → "Tasks: Run Task"
+```
+
+### Desenvolvimento nativo (Host app)
+```bash
+oct android            # 🤖 Abre 2 terminais: Build + Logs Android
+oct ios               # 🍎 Abre 2 terminais: Build + Logs iOS
 ```
 
 ### Nova feature

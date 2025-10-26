@@ -658,6 +658,98 @@ class Octopus {
     }
   }
 
+  async android() {
+    console.log(chalk.blue('🤖 Iniciando Android para o Host App...\n'));
+    
+    const validRepos = this.getValidRepos();
+    const hostRepo = validRepos.find(repo => repo.isHost);
+    
+    if (!hostRepo) {
+      console.log(chalk.red('❌ Host app não encontrado! Verifique a configuração.'));
+      return;
+    }
+
+    console.log(chalk.cyan(`📱 Executando Android no Host: ${hostRepo.name}`));
+    
+    try {
+      // Detectar se yarn está disponível
+      let packageManager = 'yarn';
+      try {
+        await this.runCommand('yarn', ['--version'], hostRepo.repoPath, { timeout: 5000 });
+      } catch (error) {
+        packageManager = 'npm';
+      }
+      
+      const androidCommand = packageManager === 'yarn' ? 'yarn android' : 'npm run android';
+      const logCommand = 'npx react-native log-android';
+      
+      // Abrir terminal para build Android
+      await this.openTerminalImproved(`Android-Build-${hostRepo.name}`, hostRepo.repoPath, androidCommand);
+      
+      // Abrir terminal para logs Android (com delay para não conflitar)
+      setTimeout(async () => {
+        try {
+          await this.openTerminalImproved(`Android-Logs-${hostRepo.name}`, hostRepo.repoPath, logCommand);
+        } catch (error) {
+          console.log(chalk.yellow(`⚠️  Não foi possível abrir logs Android: ${error.message}`));
+        }
+      }, 2000);
+      
+      console.log(chalk.green('✅ Terminais Android abertos com sucesso!'));
+      console.log(chalk.cyan('   📱 Terminal 1: Build Android'));
+      console.log(chalk.cyan('   📋 Terminal 2: Logs Android'));
+      console.log(chalk.blue('💡 Certifique-se de ter um emulador rodando ou device conectado.'));
+    } catch (error) {
+      console.error(chalk.red(`❌ Erro ao abrir Android: ${error.message}`));
+    }
+  }
+
+  async ios() {
+    console.log(chalk.blue('🍎 Iniciando iOS para o Host App...\n'));
+    
+    const validRepos = this.getValidRepos();
+    const hostRepo = validRepos.find(repo => repo.isHost);
+    
+    if (!hostRepo) {
+      console.log(chalk.red('❌ Host app não encontrado! Verifique a configuração.'));
+      return;
+    }
+
+    console.log(chalk.cyan(`📱 Executando iOS no Host: ${hostRepo.name}`));
+    
+    try {
+      // Detectar se yarn está disponível
+      let packageManager = 'yarn';
+      try {
+        await this.runCommand('yarn', ['--version'], hostRepo.repoPath, { timeout: 5000 });
+      } catch (error) {
+        packageManager = 'npm';
+      }
+      
+      const iosCommand = packageManager === 'yarn' ? 'yarn ios' : 'npm run ios';
+      const logCommand = 'npx react-native log-ios';
+      
+      // Abrir terminal para build iOS
+      await this.openTerminalImproved(`iOS-Build-${hostRepo.name}`, hostRepo.repoPath, iosCommand);
+      
+      // Abrir terminal para logs iOS (com delay para não conflitar)
+      setTimeout(async () => {
+        try {
+          await this.openTerminalImproved(`iOS-Logs-${hostRepo.name}`, hostRepo.repoPath, logCommand);
+        } catch (error) {
+          console.log(chalk.yellow(`⚠️  Não foi possível abrir logs iOS: ${error.message}`));
+        }
+      }, 2000);
+      
+      console.log(chalk.green('✅ Terminais iOS abertos com sucesso!'));
+      console.log(chalk.cyan('   📱 Terminal 1: Build iOS'));
+      console.log(chalk.cyan('   📋 Terminal 2: Logs iOS'));
+      console.log(chalk.blue('💡 Certifique-se de ter o Xcode e simulador configurados.'));
+    } catch (error) {
+      console.error(chalk.red(`❌ Erro ao abrir iOS: ${error.message}`));
+    }
+  }
+
   async startWithConcurrently() {
     console.log(chalk.blue('🐙 Iniciando com Concurrently (modo paralelo)...\n'));
     

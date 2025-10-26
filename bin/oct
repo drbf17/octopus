@@ -69,6 +69,20 @@ program
   });
 
 program
+  .command('android')
+  .description('Run Android build/emulator for Host app')
+  .action(async () => {
+    await octopus.android();
+  });
+
+program
+  .command('ios')
+  .description('Run iOS build/simulator for Host app')
+  .action(async () => {
+    await octopus.ios();
+  });
+
+program
   .command('status')
   .description('Show status of all repositories')
   .action(async () => {
