@@ -1,227 +1,124 @@
 # 🐙 Octopus - Multi-Repository Manager
 
-Ferramenta CLI para gerenciar múltiplos repositórios de micro apps de forma eficiente e cross-platform.
+Ferramenta CLI para gerenciar múltiplos repositórios React Native de forma eficiente e cross-platform.
 
-## 🌍 Compatibilidade Cross-Platform
-
-✅ **macOS** - Terminal.app com AppleScript  
-✅ **Windows** - CMD nativo  
-✅ **Linux** - gnome-terminal  
-
-## 🚀 Instalação
+## 🚀 Instalação e Uso
 
 ```bash
-# 1. Instalar dependências
+# 1. Clone e setup do Octopus
+git clone https://github.com/drbf17/octopus.git
 cd octopus
 yarn install
+yarn link    # 🔗 Torna o comando 'oct' disponível globalmente
 
-# 2. Tornar comando global (opcional)
-yarn link
-```
-
-## 🎯 Uso Básico - Tudo em Um Comando
-
-### `oct init` - Setup Completo Automático
-
-```bash
+# 2. Setup completo automatizado  
 oct init
 ```
 
-**O que acontece:**
-1. 📝 Pergunta o nome do projeto
-2. 📋 Mostra lista de repositórios disponíveis
-3. ✅ Seleção interativa (Space = selecionar, Enter = confirmar)
-4. 📥 **Clone automático** dos repositórios selecionados
-5. 📦 **Instalação paralela** (yarn install simultâneo em todos)
-6. 🔧 **Criação de tasks VS Code** para desenvolvimento
-7. 🗂️ **Geração de workspace VS Code** com todos os repositórios
+> **💡 Importante:** O `yarn link` é essencial para que o comando `oct` funcione globalmente no terminal.
 
-**Resultado:** Projeto completo configurado e pronto para desenvolvimento!
+## 📋 Comandos Disponíveis
 
-## 📋 Comandos Adicionais
+| Comando | Descrição |
+|---------|-----------|
+| `oct init` | **Setup completo**: clone + install + VS Code workspace |
+| `oct clone` | Clona repositórios em falta |
+| `oct install` | yarn/npm install em paralelo (todos repos) |
+| `oct start` | Inicia todos os servidores em terminais separados |
+| `oct lint` | Lint em terminais separados por projeto |
+| `oct test` | Testes em terminais separados por projeto |
+| `oct checkout <branch>` | Checkout + pull em todos os repositórios |
+| `oct new-branch <name> [base]` | Cria nova branch em todos os repos |
+| `oct status` | Status Git de todos os repositórios |
+| `oct list` | Lista repositórios configurados |
 
+## � Exemplos de Uso
+
+### Setup inicial completo
 ```bash
-# Controle de Git
-oct checkout <branch>           # Checkout + pull em todos
-oct new-branch <name> [base]    # Nova branch em todos
-oct status                      # Status de todos os repositórios
-
-# Desenvolvimento  
-oct clone                       # Clona repos em falta
-oct install                     # yarn install em paralelo (rápido)
-oct start                       # Inicia todos em terminais separados
+oct init
+# ✅ Seleciona repositórios interativamente
+# ✅ Clona automaticamente
+# ✅ Instala dependências em paralelo  
+# ✅ Cria workspace VS Code
+# ✅ Configura tasks automáticas
 ```
 
-## 🖥️ Integração VS Code
-
-Após `oct init`, você terá:
-
-### 🗂️ **Workspace Automático**
-- Arquivo `{nome-projeto}-workspace.code-workspace`
-- **Pasta Root** (onde ficam .vscode, tasks, etc.)
-- **Pasta Octopus** (comandos CLI sempre acessíveis)  
-- **Cada repositório** como pasta separada
-
-**Para usar:** `File > Open Workspace from File`
-
-### ⚡ **Tasks Automáticas**
-
-**Acesso:** `Cmd+Shift+P` → `Tasks: Run Task`
-
-**Tasks Disponíveis:**
-- 🚀 **Octopus - Start All** - Inicia todos os servidores
-- 🔍 **Octopus - Lint All** - ESLint em todos os repositórios  
-- 🧪 **Octopus - Test All** - Testes com cobertura em todos
-- 🤖 **Host - Android** - Executa app no Android (só no Host)
-- 🍎 **Host - iOS** - Pod install + executa no iOS (só no Host)
-
-Cada repositório roda em terminal dedicado! 🚀
-
-## 📁 Estrutura Gerada
-
-Após `oct init`, você terá:
-
-```
-seu-projeto/
-├── .vscode/
-│   └── tasks.json              # Tasks automáticas
-├── projeto-workspace.code-workspace  # Workspace VS Code
-├── octopus/                    # Ferramenta CLI
-├── Host/                       # Repositório clonado
-├── Auth/                       # Repositório clonado
-└── Home/                       # Repositório clonado
-```
-
-## ⚙️ Personalização
-
-### Usar em Outros Projetos
-
+### Desenvolvimento diário
 ```bash
-# 1. Copiar Octopus
-cp -r octopus /novo-projeto/octopus
-cd /novo-projeto/octopus && yarn install
-
-# 2. Editar configuração
-# Abra: octopus/config/default-repos.json
-# Altere URLs, nomes e portas dos seus repositórios
-
-# 3. Executar
-cd /novo-projeto && oct init
+oct checkout develop    # Atualiza todos para develop
+oct start              # Inicia todos os servidores
+# Use VS Code Tasks: Cmd+Shift+P → "Tasks: Run Task"
 ```
 
-### Exemplo de Configuração (`default-repos.json`)
+### Nova feature
+```bash
+oct new-branch feature/login develop  # Cria branch em todos
+# ... desenvolvimento ...
+oct lint               # Lint por projeto
+oct test              # Testes por projeto
+```
 
+### 🖥️ VS Code Integration
+Após `oct init`:
+- **Workspace**: `{projeto}-workspace.code-workspace`
+- **Tasks**: `Cmd+Shift+P` → `Tasks: Run Task`
+- **Keybindings**: `Cmd+Shift+R` → Start All
+
+## 📁 Estrutura de Projeto
+```
+meu-projeto/
+├── .vscode/tasks.json                    # Tasks automáticas
+├── meu-projeto-workspace.code-workspace  # VS Code workspace  
+├── octopus/                             # CLI tool
+├── Host/                                # Repositório clonado
+├── Auth/                                # Repositório clonado
+└── Home/                                # Repositório clonado
+```
+
+## 🔧 Sobre o Projeto
+
+### Princípios
+- **Simplicidade**: Um comando (`oct init`) configura tudo
+- **Cross-platform**: funciona no macOS, Windows e Linux  
+- **Inteligente**: detecta yarn/npm automaticamente
+- **Integrado**: gera workspace e tasks do VS Code
+- **Reutilizável**: facilmente adaptável para outros projetos
+
+### Objetivos
+- Eliminar setup manual repetitivo de múltiplos repositórios
+- Centralizar operações Git em todos os repos simultaneamente
+- Otimizar workflow de desenvolvimento React Native/micro apps
+- Fornecer experiência consistente entre diferentes plataformas
+
+### Configuração (`config/default-repos.json`)
 ```json
 {
   "repositories": [
     {
-      "name": "Frontend",
-      "url": "https://github.com/user/frontend.git",
-      "localPath": "frontend",
+      "name": "Host",
+      "url": "https://github.com/user/host.git",
+      "localPath": "Host", 
+      "port": 8081,
       "active": true,
-      "port": 3000,
-      "priority": 1,
-      "description": "Interface do usuário"
+      "isHost": true,
+      "description": "App principal React Native"
     }
   ],
   "settings": {
     "defaultBranch": "main",
     "autoInstall": true,
-    "createVSCodeTasks": true,
-    "terminalType": "system"
+    "createVSCodeTasks": true
   }
 }
 ```
 
-### Configuração do Host (para Mobile)
-
-Para usar tasks Android e iOS, marque o repositório principal como Host:
-
-```json
-{
-  "name": "Host",
-  "url": "https://github.com/user/host-app.git", 
-  "localPath": "host-app",
-  "active": true,
-  "port": 8081,
-  "priority": 1,
-  "isHost": true,                    // ✨ Gera tasks Android/iOS
-  "description": "Host application"
-}
-```
-
-## 🔄 Fluxo de Trabalho
-
-### Primeira vez:
-```bash
-oct init     # Configura tudo automaticamente
-# ✅ Repositórios clonados
-# ✅ Dependências instaladas  
-# ✅ Workspace VS Code criado
-```
-
-### Desenvolvimento diário:
-
-```bash
-oct checkout develop    # Atualiza todos para develop
-oct start              # Inicia todos os servidores
-# Use VS Code Tasks para mobile, lint, testes
-```
-
-**Tasks VS Code para desenvolvimento:**
-- 🚀 `Octopus - Start All` → Todos os servidores
-- 🤖 `Host - Android` → App no Android  
-- 🍎 `Host - iOS` → App no iOS (com pod install)
-- 🔍 `Octopus - Lint All` → Lint em todos
-- 🧪 `Octopus - Test All` → Testes com cobertura
-
-### Nova feature:
-```bash
-oct new-branch feature/login develop  # Cria branch em todos
-# ... desenvolver ...
-oct install                          # Se houver novas dependências
-```
-
-## 🚨 Arquivos Importantes
-
-### ✅ Versionados (templates):
-- `config/default-repos.json` - Template de repositórios
-- `src/octopus.js` - Código fonte
-- `package.json` - Dependências
-
-### 🚫 Ignorados (gerados automaticamente):
-- `config/octopus-config.json` - Criado pelo `oct init`
-- `.vscode/` - Tasks geradas
-- `*-workspace.code-workspace` - Workspace gerado
-
-## 🎯 Vantagens
-
-✅ **Setup em um comando** - `oct init` faz tudo  
-✅ **Cross-platform** - macOS, Windows, Linux  
-✅ **Workspace VS Code** - Todos repos organizados  
-✅ **Tasks automáticas** - Inicia todos com um clique  
-✅ **Git sincronizado** - Operações em todos repos  
-✅ **Reutilizável** - Use em qualquer projeto  
-
-## 🐛 Solução de Problemas
-
-### Terminal não abre (Windows)
-```bash
-# Verifique se cmd está no PATH
-where cmd
-```
-
-### Terminal não abre (Linux)
-```bash
-# Instale gnome-terminal
-sudo apt install gnome-terminal
-```
-
-### Tasks não aparecem no VS Code
-- ✅ Abra o **workspace** (não pastas individuais)
-- ✅ Verifique se existe `.vscode/tasks.json`
-- ✅ Use `File > Open Workspace from File`
+### Compatibilidade
+- ✅ **Package Manager**: Auto-detecção yarn/npm
+- ✅ **Terminais**: AppleScript (macOS), CMD (Windows), gnome-terminal (Linux)
+- ✅ **Git**: Simple-git para operações cross-platform  
+- ✅ **Node.js**: Execa para execução robusta de processos
 
 ---
 
-**🐙 Octopus - Gerencie seus repositórios com facilidade em qualquer plataforma!** ✨
+**🐙 Octopus** - Simplifique o gerenciamento de múltiplos repositórios React Native
