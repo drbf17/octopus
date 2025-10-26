@@ -41,7 +41,6 @@
   "settings": {
     "defaultBranch": "main",
     "autoInstall": true,
-    "createVSCodeTasks": true,
     "terminalType": "system"
   }
 }

@@ -13,8 +13,6 @@ class Octopus {
   constructor() {
     this.configPath = path.join(__dirname, '../config/octopus-config.json');
     this.defaultReposPath = path.join(__dirname, '../config/default-repos.json');
-    this.vscodeDir = path.join(process.cwd(), '.vscode');
-    this.tasksFile = path.join(this.vscodeDir, 'tasks.json');
     
     this.config = this.loadConfig();
     this.defaultRepos = this.loadDefaultRepos();
@@ -681,174 +679,6 @@ class Octopus {
     });
   }
 
-  async createVSCodeTasks() {
-    if (!this.config.settings.createVSCodeTasks) return;
-
-    console.log(chalk.yellow('🖥️  Criando tasks otimizadas do VS Code...\n'));
-
-    const tasksConfig = {
-      version: "2.0.0",
-      tasks: []
-    };
-
-    const startTaskLabels = [];
-    const lintTaskLabels = [];
-    const testTaskLabels = [];
-
-    // Criar task individual para cada repo
-    for (const repo of this.config.repositories) {
-      if (!repo.active) continue;
-
-      const repoPath = path.resolve(process.cwd(), repo.localPath);
-      
-      // Task de start
-      const startTask = {
-        label: `${repo.name} - start`,
-        type: "shell",
-        command: "yarn start",
-        options: {
-          cwd: repoPath
-        },
-        group: "build",
-        presentation: {
-          echo: true,
-          reveal: "always",
-          focus: false,
-          panel: "new",
-          showReuseMessage: true,
-          clear: false
-        },
-        problemMatcher: []
-      };
-
-      tasksConfig.tasks.push(startTask);
-      startTaskLabels.push(startTask.label);
-
-      // Task de lint
-      const lintTask = {
-        label: `${repo.name} - lint`,
-        type: "shell",
-        command: "yarn lint",
-        options: {
-          cwd: repoPath
-        },
-        group: "test",
-        presentation: {
-          echo: true,
-          reveal: "always",
-          focus: false,
-          panel: "new",
-          showReuseMessage: true,
-          clear: false
-        },
-        problemMatcher: ["$eslint-stylish"]
-      };
-
-      tasksConfig.tasks.push(lintTask);
-      lintTaskLabels.push(lintTask.label);
-
-      // Task de test
-      const testTask = {
-        label: `${repo.name} - test`,
-        type: "shell",
-        command: "yarn test --coverage",
-        options: {
-          cwd: repoPath
-        },
-        group: "test",
-        presentation: {
-          echo: true,
-          reveal: "always",
-          focus: false,
-          panel: "new",
-          showReuseMessage: true,
-          clear: false
-        },
-        problemMatcher: []
-      };
-
-      tasksConfig.tasks.push(testTask);
-      testTaskLabels.push(testTask.label);
-
-      // Tasks específicas do Host (Android e iOS)
-      if (repo.isHost) {
-        // Task Android
-        const androidTask = {
-          label: `${repo.name} - Android`,
-          type: "shell",
-          command: "yarn android",
-          options: {
-            cwd: repoPath
-          },
-          group: "build",
-          presentation: {
-            echo: true,
-            reveal: "always",
-            focus: true,
-            panel: "new",
-            showReuseMessage: true,
-            clear: false
-          },
-          problemMatcher: []
-        };
-
-        tasksConfig.tasks.push(androidTask);
-
-        // Task iOS (com pod install)
-        const iosTask = {
-          label: `${repo.name} - iOS`,
-          type: "shell",
-          command: "cd ios && pod install && cd .. && yarn ios",
-          options: {
-            cwd: repoPath
-          },
-          group: "build",
-          presentation: {
-            echo: true,
-            reveal: "always",
-            focus: true,
-            panel: "new",
-            showReuseMessage: true,
-            clear: false
-          },
-          problemMatcher: []
-        };
-
-        tasksConfig.tasks.push(iosTask);
-      }
-    }
-
-    // Tasks compostas
-    const compoundTasks = [
-      {
-        label: "Octopus - Start All",
-        dependsOrder: "parallel",
-        dependsOn: startTaskLabels
-      },
-      {
-        label: "Octopus - Lint All",
-        dependsOrder: "parallel", 
-        dependsOn: lintTaskLabels
-      },
-      {
-        label: "Octopus - Test All",
-        dependsOrder: "parallel",
-        dependsOn: testTaskLabels
-      }
-    ];
-
-    tasksConfig.tasks.push(...compoundTasks);
-
-    // Salvar tasks.json
-    if (!fs.existsSync(this.vscodeDir)) {
-      fs.mkdirSync(this.vscodeDir, { recursive: true });
-    }
-
-    fs.writeFileSync(this.tasksFile, JSON.stringify(tasksConfig, null, 2));
-    console.log(chalk.green('✅ Tasks do VS Code criadas!'));
-    console.log(chalk.blue('💡 Use Cmd+Shift+P > "Tasks: Run Task" > "Octopus - Start All"'));
-  }
-
   async createVSCodeWorkspace() {
     if (!this.config) {
       console.log(chalk.red('❌ Execute "oct init" primeiro!'));
@@ -880,10 +710,6 @@ class Octopus {
           "bradlc.vscode-tailwindcss",
           "ms-vscode.vscode-json"
         ]
-      },
-      tasks: {
-        version: "2.0.0",
-        tasks: []
       }
     };
 

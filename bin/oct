@@ -13,7 +13,7 @@ program
 
 program
   .command('init')
-  .description('Initialize Octopus with repo selection and VS Code tasks')
+  .description('Initialize Octopus with repo selection and VS Code workspace')
   .action(async () => {
     await octopus.init();
   });
