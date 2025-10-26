@@ -272,8 +272,10 @@ class Octopus {
       return;
     }
 
-    console.log(chalk.blue('🐙 Instalando dependências...\n'));
+    console.log(chalk.blue('🐙 Instalando dependências em paralelo...\n'));
 
+    // Preparar lista de repositórios válidos
+    const validRepos = [];
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
@@ -284,17 +286,47 @@ class Octopus {
         continue;
       }
 
-      const spinner = ora(`Instalando ${repo.name}...`).start();
-
-      try {
-        await this.runCommand('yarn', ['install'], repoPath);
-        spinner.succeed(chalk.green(`✅ ${repo.name}: dependências instaladas`));
-      } catch (error) {
-        spinner.fail(chalk.red(`❌ ${repo.name}: ${error.message}`));
-      }
+      validRepos.push({ ...repo, repoPath });
     }
 
-    console.log(chalk.green('\n🎉 Instalação concluída em todos os repositórios!'));
+    if (validRepos.length === 0) {
+      console.log(chalk.yellow('⚠️  Nenhum repositório válido encontrado!'));
+      return;
+    }
+
+    // Criar spinners para cada repositório
+    const spinners = {};
+    validRepos.forEach(repo => {
+      spinners[repo.name] = ora(`Instalando ${repo.name}...`).start();
+    });
+
+    // Executar instalações em paralelo
+    const installPromises = validRepos.map(async (repo) => {
+      try {
+        await this.runCommand('yarn', ['install'], repo.repoPath);
+        spinners[repo.name].succeed(chalk.green(`✅ ${repo.name}: dependências instaladas`));
+        return { name: repo.name, success: true };
+      } catch (error) {
+        spinners[repo.name].fail(chalk.red(`❌ ${repo.name}: ${error.message}`));
+        return { name: repo.name, success: false, error: error.message };
+      }
+    });
+
+    // Aguardar todas as instalações
+    const results = await Promise.all(installPromises);
+    
+    // Mostrar resumo
+    const successful = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+    
+    console.log(chalk.green(`\n🎉 Instalação concluída: ${successful} sucessos, ${failed} falhas`));
+    
+    if (failed > 0) {
+      console.log(chalk.yellow('\n⚠️  Repositórios com falha:'));
+      results.filter(r => !r.success).forEach(r => {
+        console.log(chalk.red(`   - ${r.name}: ${r.error}`));
+      });
+    }
   }
 
   async start() {

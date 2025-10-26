@@ -32,7 +32,7 @@ oct init
 2. 📋 Mostra lista de repositórios disponíveis
 3. ✅ Seleção interativa (Space = selecionar, Enter = confirmar)
 4. 📥 **Clone automático** dos repositórios selecionados
-5. 📦 **Instalação automática** (yarn install em todos)
+5. 📦 **Instalação paralela** (yarn install simultâneo em todos)
 6. 🔧 **Criação de tasks VS Code** para desenvolvimento
 7. 🗂️ **Geração de workspace VS Code** com todos os repositórios
 
@@ -48,7 +48,7 @@ oct status                      # Status de todos os repositórios
 
 # Desenvolvimento  
 oct clone                       # Clona repos em falta
-oct install                     # yarn install em todos
+oct install                     # yarn install em paralelo (rápido)
 oct start                       # Inicia todos em terminais separados
 ```
 
