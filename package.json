@@ -12,6 +12,7 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^9.4.1",
+    "concurrently": "^9.2.1",
     "execa": "^9.6.0",
     "inquirer": "^8.2.4",
     "listr2": "^9.0.5",

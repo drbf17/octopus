@@ -158,10 +158,7 @@ class Octopus {
       await this.install();
     }
 
-    // Criar tasks do VS Code
-    await this.createVSCodeTasks();
-
-    // Criar workspace VS Code
+    // Criar workspace VS Code (sem tasks complexas)
     await this.createVSCodeWorkspace();
 
     console.log(chalk.blue('\n🎉 Octopus configurado com sucesso!'));
@@ -382,17 +379,103 @@ class Octopus {
     }
   }
 
-  async start() {
+  async start(mode = 'unified') {
     if (!this.config) {
       console.log(chalk.red('❌ Execute "oct init" primeiro!'));
       return;
     }
 
-    console.log(chalk.blue('🐙 Iniciando servidores de desenvolvimento...\n'));
+    const validRepos = this.getValidRepos();
+    if (validRepos.length === 0) return;
 
+    // Por padrão usar terminal unificado com concurrently
+    if (mode === 'unified' || mode === 'concurrently') {
+      return this.startUnified(validRepos);
+    } else if (mode === 'separate') {
+      return this.startSeparateTerminals(validRepos);
+    }
+  }
+
+  async startUnified(validRepos) {
+    console.log(chalk.blue('🐙 Iniciando servidores em terminal unificado...\n'));
+
+    // Detectar package manager para cada repo
+    const commands = validRepos.map(repo => {
+      const hasYarnLock = fs.existsSync(path.join(repo.repoPath, 'yarn.lock'));
+      const packageManager = hasYarnLock ? 'yarn' : 'npm';
+      const startCommand = packageManager === 'yarn' ? 'yarn start' : 'npm start';
+      
+      return {
+        name: `${repo.name}:${repo.port}`,
+        command: startCommand,
+        cwd: repo.repoPath,
+        prefixColor: this.getColorForRepo(repo.name)
+      };
+    });
+
+    console.log(chalk.cyan('📋 Serviços que serão iniciados:'));
+    commands.forEach(cmd => {
+      console.log(chalk.gray(`   • ${cmd.name} (${cmd.command})`));
+    });
+    
+    console.log(chalk.blue('\n🚀 Iniciando todos os serviços...\n'));
+
+    try {
+      const concurrently = require('concurrently');
+      
+      const { result } = concurrently(
+        commands.map(cmd => ({
+          command: cmd.command,
+          name: cmd.name,
+          cwd: cmd.cwd,
+          prefixColor: cmd.prefixColor
+        })),
+        {
+          prefix: 'name',
+          killOthers: ['failure'],
+          restartTries: 3,
+          restartDelay: 2000,
+          prefixColors: ['cyan', 'magenta', 'green', 'yellow', 'blue', 'red'],
+          timestampFormat: 'HH:mm:ss'
+        }
+      );
+
+      // Mostrar informações úteis
+      console.log(chalk.green('✅ Todos os serviços iniciados com sucesso!'));
+      console.log(chalk.blue('\n💡 Dicas:'));
+      console.log(chalk.gray('   • Use Ctrl+C para parar todos os serviços'));
+      console.log(chalk.gray('   • Os logs são coloridos por serviço'));
+      console.log(chalk.gray('   • Restart automático em caso de falha'));
+      
+      await result;
+      
+    } catch (error) {
+      console.error(chalk.red('\n❌ Erro ao iniciar serviços:'), error.message);
+      console.log(chalk.yellow('\n💡 Tente usar modo separado: oct start --mode separate'));
+    }
+  }
+
+  async startSeparateTerminals(validRepos) {
+    console.log(chalk.blue('🐙 Iniciando servidores em terminais separados...\n'));
+
+    // Iniciar cada repositório em terminal separado
+    for (const repo of validRepos) {
+      console.log(chalk.cyan(`🚀 Iniciando ${repo.name} na porta ${repo.port}`));
+
+      try {
+        await this.openTerminalImproved(repo.name, repo.repoPath, 'yarn start');
+      } catch (error) {
+        console.error(chalk.red(`⚠️  Erro ao abrir terminal para ${repo.name}: ${error.message}`));
+      }
+    }
+
+    console.log(chalk.green('\n🎉 Todos os servidores foram iniciados!'));
+    console.log(chalk.blue('💡 Cada repositório está rodando em seu próprio terminal.'));
+  }
+
+  getValidRepos() {
     const validRepos = [];
     
-    // Validar repos primeiro
     for (const repo of this.config.repositories) {
       if (!repo.active) continue;
 
@@ -408,22 +491,15 @@ class Octopus {
 
     if (validRepos.length === 0) {
       console.log(chalk.yellow('⚠️  Nenhum repositório válido encontrado!'));
-      return;
     }
 
-    // Iniciar cada repositório
-    for (const repo of validRepos) {
-      console.log(chalk.cyan(`🚀 Iniciando ${repo.name} na porta ${repo.port}`));
+    return validRepos;
+  }
 
-      try {
-        await this.openTerminalImproved(repo.name, repo.repoPath, 'yarn start');
-      } catch (error) {
-        console.error(chalk.red(`⚠️  Erro ao abrir terminal para ${repo.name}: ${error.message}`));
-      }
-    }
-
-    console.log(chalk.green('\n🎉 Todos os servidores foram iniciados!'));
-    console.log(chalk.blue('💡 Cada repositório está rodando em seu próprio terminal.'));
+  getColorForRepo(repoName) {
+    const colors = ['cyan', 'magenta', 'green', 'yellow', 'blue', 'red'];
+    const index = repoName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[index % colors.length];
   }
 
   async startWithConcurrently() {
@@ -608,7 +684,7 @@ class Octopus {
   async createVSCodeTasks() {
     if (!this.config.settings.createVSCodeTasks) return;
 
-    console.log(chalk.yellow('🖥️  Criando tasks do VS Code...\n'));
+    console.log(chalk.yellow('🖥️  Criando tasks otimizadas do VS Code...\n'));
 
     const tasksConfig = {
       version: "2.0.0",

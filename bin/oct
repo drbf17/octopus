@@ -48,9 +48,10 @@ program
 
 program
   .command('start')
-  .description('Run npm start in all repositories (separate terminals)')
-  .action(async () => {
-    await octopus.start();
+  .description('Run npm start in all repositories')
+  .option('-m, --mode <mode>', 'execution mode: unified (default), separate', 'unified')
+  .action(async (options) => {
+    await octopus.start(options.mode);
   });
 
 program
