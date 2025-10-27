@@ -49,14 +49,38 @@ class Octopus {
     this.defaultRepos = this.loadDefaultRepos();
   }
 
+  // Helper para verificar se um script existe no package.json
+  checkScriptExists(scriptName, repoPath) {
+    try {
+      const packageJsonPath = path.join(repoPath, 'package.json');
+      if (!fs.existsSync(packageJsonPath)) {
+        return false;
+      }
+      
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      return !!(packageJson.scripts && packageJson.scripts[scriptName]);
+    } catch (error) {
+      return false;
+    }
+  }
+
   // Helper para construir comandos com prefixo opcional para monorepos
   buildCommand(baseCommand, repo) {
     if (repo.prefix) {
-      // Para monorepos: yarn <prefix> <comando>
-      // Ex: baseCommand = "yarn install" -> "yarn host install"
-      // Ex: baseCommand = "yarn start" -> "yarn host start"
       const commandWithoutYarn = baseCommand.replace('yarn ', '');
-      return `yarn ${repo.prefix} ${commandWithoutYarn}`;
+      
+      // Verificar se o script com prefix existe
+      const scriptName = `${repo.prefix} ${commandWithoutYarn}`.trim();
+      if (this.checkScriptExists(repo.prefix, repo.repoPath)) {
+        const finalCommand = `yarn ${repo.prefix} ${commandWithoutYarn}`;
+        console.log(chalk.magenta(`🔄 [${repo.name}] ${baseCommand} → ${finalCommand} (script encontrado)`));
+        return finalCommand;
+      } else {
+        // Tentar yarn workspace como alternativa
+        const workspaceCommand = `yarn workspace ${repo.prefix} ${commandWithoutYarn}`;
+        console.log(chalk.yellow(`⚠️  [${repo.name}] Script '${repo.prefix}' não encontrado, tentando: ${workspaceCommand}`));
+        return workspaceCommand;
+      }
     }
     return baseCommand;
   }
@@ -380,12 +404,17 @@ class Octopus {
       task: async (ctx, task) => {
         return limit(async () => {
           try {
-            task.output = `Usando yarn${repo.prefix ? ` ${repo.prefix}` : ''}...`;
-            
             const fullCommand = this.buildCommand('yarn install', repo);
             const commandParts = fullCommand.split(' ');
             const installCommand = commandParts[0]; // sempre 'yarn'
             const installArgs = commandParts.slice(1); // ['install'] ou ['host', 'install']
+            
+            // Log detalhado para troubleshooting
+            console.log(chalk.cyan(`🔍 [${repo.name}] Comando: ${installCommand} ${installArgs.join(' ')}`));
+            console.log(chalk.gray(`   Diretório: ${repo.repoPath}`));
+            console.log(chalk.gray(`   Prefix: ${repo.prefix || 'nenhum'}`));
+            
+            task.output = `Executando: ${fullCommand}`;
             
             await this.runCommand(installCommand, installArgs, repo.repoPath, {
               timeout: 180000 // 3 minutos por repo
@@ -1218,6 +1247,11 @@ class Octopus {
   }
 
   async runCommand(command, args, cwd, options = {}) {
+    // Log detalhado do comando sendo executado
+    const fullCmd = `${command} ${args.join(' ')}`;
+    console.log(chalk.blue(`🔧 Executando: ${fullCmd}`));
+    console.log(chalk.gray(`   📁 Diretório: ${cwd}`));
+    
     try {
       const result = await execa(command, args, {
         cwd,
@@ -1225,11 +1259,17 @@ class Octopus {
         timeout: options.timeout || 300000, // 5 minutos default
         ...options
       });
+      
+      console.log(chalk.green(`✅ Comando concluído: ${fullCmd}`));
       return result;
     } catch (error) {
       // Melhor tratamento de erro com informações detalhadas
+      console.log(chalk.red(`❌ Comando falhou: ${fullCmd}`));
+      console.log(chalk.red(`   Exit Code: ${error.exitCode}`));
+      console.log(chalk.red(`   Stderr: ${error.stderr}`));
+      
       const errorInfo = {
-        command: `${command} ${args.join(' ')}`,
+        command: fullCmd,
         cwd,
         exitCode: error.exitCode,
         stderr: error.stderr,
