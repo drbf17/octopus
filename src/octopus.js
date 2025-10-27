@@ -724,13 +724,17 @@ class Octopus {
         try {
           console.log(chalk.blue(`📋 Abrindo terminal para logs Android...`));
           
-          // Comando de log sempre executado na pasta do octopus
-          const logCommand = 'yarn react-native log-android';
+          // Comando de log com prefix na pasta do Host
+          let logCommand;
+          if (hostRepo.prefix) {
+            logCommand = `yarn ${hostRepo.prefix} react-native log-android`;
+          } else {
+            logCommand = 'yarn react-native log-android';
+          }
           console.log(chalk.cyan(`🔧 Comando de log: ${logCommand}`));
           
-          // Executar na pasta atual do octopus, não no diretório do Host
-          const octopusPath = process.cwd();
-          await this.openTerminalImproved(`Android-Logs`, octopusPath, logCommand);
+          // Executar na pasta do Host
+          await this.openTerminalImproved(`Android-Logs-${hostRepo.name}`, hostRepo.repoPath, logCommand);
           console.log(chalk.green(`✅ Terminal de logs Android aberto!`));
         } catch (error) {
           console.log(chalk.yellow(`⚠️  Não foi possível abrir logs Android: ${error.message}`));
@@ -779,13 +783,17 @@ class Octopus {
         try {
           console.log(chalk.blue(`📋 Abrindo terminal para logs iOS...`));
           
-          // Comando de log sempre executado na pasta do octopus
-          const logCommand = 'yarn react-native log-ios';
+          // Comando de log com prefix na pasta do Host
+          let logCommand;
+          if (hostRepo.prefix) {
+            logCommand = `yarn ${hostRepo.prefix} react-native log-ios`;
+          } else {
+            logCommand = 'yarn react-native log-ios';
+          }
           console.log(chalk.cyan(`🔧 Comando de log: ${logCommand}`));
           
-          // Executar na pasta atual do octopus, não no diretório do Host
-          const octopusPath = process.cwd();
-          await this.openTerminalImproved(`iOS-Logs`, octopusPath, logCommand);
+          // Executar na pasta do Host
+          await this.openTerminalImproved(`iOS-Logs-${hostRepo.name}`, hostRepo.repoPath, logCommand);
           console.log(chalk.green(`✅ Terminal de logs iOS aberto!`));
         } catch (error) {
           console.log(chalk.yellow(`⚠️  Não foi possível abrir logs iOS: ${error.message}`));
