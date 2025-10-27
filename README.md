@@ -188,11 +188,32 @@ yarn oct status        # Status Git de todos os repos
 }
 ```
 
+### Suporte a Monorepos
+
+Para projetos que são monorepos e precisam de comandos específicos como `yarn workspace`, use o campo `prefix`:
+
+```json
+{
+  "name": "Host",
+  "url": "https://github.com/user/host-repo.git",
+  "localPath": "../Host",
+  "prefix": "host",
+  "active": true,
+  "port": 8081
+}
+```
+
+Com isso, os comandos serão executados como:
+- `yarn oct install` → `yarn host install` 
+- `yarn oct start` → `yarn host start`
+- `yarn oct android` → `yarn host android`
+
 ### Compatibilidade
 - ✅ **Package Manager**: Auto-detecção yarn/npm
 - ✅ **Terminais**: AppleScript (macOS), CMD (Windows), gnome-terminal (Linux)
 - ✅ **Git**: Simple-git para operações cross-platform  
 - ✅ **Node.js**: Execa para execução robusta de processos
+- ✅ **Monorepos**: Campo `prefix` para comandos personalizados
 
 ---
 

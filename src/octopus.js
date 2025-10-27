@@ -49,12 +49,14 @@ class Octopus {
     this.defaultRepos = this.loadDefaultRepos();
   }
 
-  // Helper para construir comandos com prefixo opcional
+  // Helper para construir comandos com prefixo opcional para monorepos
   buildCommand(baseCommand, repo) {
     if (repo.prefix) {
-      // Se tem prefixo, usa: yarn prefix comando
-      // Ex: yarn host install
-      return `yarn ${repo.prefix} ${baseCommand.replace('yarn ', '')}`;
+      // Para monorepos: yarn <prefix> <comando>
+      // Ex: baseCommand = "yarn install" -> "yarn host install"
+      // Ex: baseCommand = "yarn start" -> "yarn host start"
+      const commandWithoutYarn = baseCommand.replace('yarn ', '');
+      return `yarn ${repo.prefix} ${commandWithoutYarn}`;
     }
     return baseCommand;
   }
@@ -381,7 +383,9 @@ class Octopus {
             task.output = `Usando yarn${repo.prefix ? ` ${repo.prefix}` : ''}...`;
             
             const fullCommand = this.buildCommand('yarn install', repo);
-            const [installCommand, ...installArgs] = fullCommand.split(' ');
+            const commandParts = fullCommand.split(' ');
+            const installCommand = commandParts[0]; // sempre 'yarn'
+            const installArgs = commandParts.slice(1); // ['install'] ou ['host', 'install']
             
             await this.runCommand(installCommand, installArgs, repo.repoPath, {
               timeout: 180000 // 3 minutos por repo
@@ -843,7 +847,7 @@ class Octopus {
     if (validRepos.length === 0) return;
 
     const commands = validRepos.map(repo => {
-      const startCommand = 'yarn start';
+      const startCommand = this.buildCommand('yarn start', repo);
       
       return {
         command: startCommand,
@@ -884,20 +888,24 @@ class Octopus {
 
     // Criar ecosystem.config.js para PM2
     const pm2Config = {
-      apps: validRepos.map(repo => ({
-        name: repo.name,
-        cwd: repo.repoPath,
-        script: 'yarn',
-        args: 'start',
-        env: {
-          PORT: repo.port,
-          NODE_ENV: 'development'
-        },
-        watch: false,
-        ignore_watch: ['node_modules', 'dist', 'build'],
-        restart_delay: 1000,
-        max_restarts: 10
-      }))
+      apps: validRepos.map(repo => {
+        const startCommand = this.buildCommand('yarn start', repo);
+        const [script, ...args] = startCommand.split(' ');
+        return {
+          name: repo.name,
+          cwd: repo.repoPath,
+          script: script,
+          args: args.join(' '),
+          env: {
+            PORT: repo.port,
+            NODE_ENV: 'development'
+          },
+          watch: false,
+          ignore_watch: ['node_modules', 'dist', 'build'],
+          restart_delay: 1000,
+          max_restarts: 10
+        };
+      })
     };
 
     const ecosystemFile = path.join(process.cwd(), 'ecosystem.config.js');
@@ -939,7 +947,8 @@ class Octopus {
         
         // Navegar para diretório e iniciar comando
         await this.runCommand('tmux', ['send-keys', '-t', `${sessionName}:${repo.name}`, `cd ${repo.repoPath}`, 'Enter'], process.cwd());
-        await this.runCommand('tmux', ['send-keys', '-t', `${sessionName}:${repo.name}`, 'yarn start', 'Enter'], process.cwd());
+        const startCommand = this.buildCommand('yarn start', repo);
+        await this.runCommand('tmux', ['send-keys', '-t', `${sessionName}:${repo.name}`, startCommand, 'Enter'], process.cwd());
       }
 
       console.log(chalk.green(`✅ Sessão Tmux "${sessionName}" criada!`));
@@ -969,7 +978,8 @@ class Octopus {
 
       try {
         // Abrir terminal separado para cada repo
-        await this.openTerminal(repo.name, repoPath, 'yarn start');
+        const startCommand = this.buildCommand('yarn start', repo);
+        await this.openTerminal(repo.name, repoPath, startCommand);
       } catch (error) {
         console.error(chalk.red(`⚠️  Erro ao abrir terminal para ${repo.name}: ${error.message}`));
       }
