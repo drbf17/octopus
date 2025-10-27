@@ -83,28 +83,13 @@ class Octopus {
     if (repo.prefix) {
       const commandWithoutYarn = baseCommand.replace('yarn ', '');
       
-      // Verificar diferentes estratégias baseadas no comando
-      console.log(chalk.blue(`🔍 [${repo.name}] Analisando comando: ${baseCommand}`));
+      // Para monorepos, a estratégia mais comum é: yarn <prefix> <comando>
+      // Exemplo: yarn host install
+      const finalCommand = `yarn ${repo.prefix} ${commandWithoutYarn}`;
       
-      // Estratégia 1: Verificar se existe script específico (ex: "host:install")
-      const prefixedScript = `${repo.prefix}:${commandWithoutYarn}`;
-      if (this.checkScriptExists(prefixedScript, repo.repoPath)) {
-        const finalCommand = `yarn ${prefixedScript}`;
-        console.log(chalk.green(`✅ [${repo.name}] Usando script: ${finalCommand}`));
-        return finalCommand;
-      }
+      console.log(chalk.blue(`🔄 [${repo.name}] ${baseCommand} → ${finalCommand} (monorepo com prefix)`));
       
-      // Estratégia 2: Verificar se existe script genérico (ex: "host")
-      if (this.checkScriptExists(repo.prefix, repo.repoPath)) {
-        const finalCommand = `yarn ${repo.prefix} ${commandWithoutYarn}`;
-        console.log(chalk.yellow(`⚠️  [${repo.name}] Tentando: ${finalCommand} (pode falhar se script não aceita argumentos)`));
-        return finalCommand;
-      }
-      
-      // Estratégia 3: Tentar yarn workspace
-      const workspaceCommand = `yarn workspace ${repo.prefix} ${commandWithoutYarn}`;
-      console.log(chalk.cyan(`🔄 [${repo.name}] Tentando workspace: ${workspaceCommand}`));
-      return workspaceCommand;
+      return finalCommand;
     }
     return baseCommand;
   }
@@ -1399,25 +1384,25 @@ class Octopus {
   // Método para tentar diferentes estratégias de comando com fallback automático
   async runCommandWithFallback(repo, action, options = {}) {
     const strategies = [
-      // Estratégia 1: Script específico (ex: "host:install")
+      // Estratégia 1: Comando direto com prefix (ex: "yarn host install") - MAIS COMUM
+      {
+        name: 'Comando com prefix',
+        command: `yarn ${repo.prefix} ${action}`,
+        check: () => true // Sempre tentar primeiro - é o mais comum para monorepos
+      },
+      // Estratégia 2: Script específico (ex: "host:install")
       {
         name: 'Script específico',
         command: `yarn ${repo.prefix}:${action}`,
         check: () => this.checkScriptExists(`${repo.prefix}:${action}`, repo.repoPath)
       },
-      // Estratégia 2: Yarn workspace
+      // Estratégia 3: Yarn workspace
       {
         name: 'Yarn workspace',
         command: `yarn workspace ${repo.prefix} ${action}`,
-        check: () => true // Sempre tentar
+        check: () => true // Tentar se as outras não funcionarem
       },
-      // Estratégia 3: Script genérico (pode não funcionar)
-      {
-        name: 'Script genérico',
-        command: `yarn ${repo.prefix} ${action}`,
-        check: () => this.checkScriptExists(repo.prefix, repo.repoPath)
-      },
-      // Estratégia 4: Comando direto no diretório
+      // Estratégia 4: Comando direto no diretório (fallback final)
       {
         name: 'Comando direto',
         command: `yarn ${action}`,
