@@ -4,6 +4,38 @@ Ferramenta CLI para gerenciar múltiplos repositórios React Native de forma efi
 
 ## 🚀 Instalação e Uso
 
+### 🖥️ Windows (PowerShell) - Instalação Automática
+```powershell
+# Opção 1: Script PowerShell (recomendado)
+.\install-windows.ps1
+
+# Opção 2: Script Batch
+.\install-windows.bat
+```
+
+### 🖥️ Windows (PowerShell) - Instalação Manual
+```powershell
+# 1. Clone e setup do Octopus
+git clone https://github.com/drbf17/octopus.git
+cd octopus
+yarn install
+yarn link
+
+# 2. Verificar se yarn está no PATH (essencial!)
+# Se não estiver, adicione: C:\Users\{seu-usuario}\AppData\Local\Yarn\bin
+$env:PATH += ";$env:LOCALAPPDATA\Yarn\bin"
+
+# 3. Reiniciar PowerShell ou executar:
+refreshenv
+
+# 4. Testar comando
+oct --help
+
+# 5. Setup completo automatizado
+oct init
+```
+
+### 🍎 macOS/Linux
 ```bash
 # 1. Clone e setup do Octopus
 git clone https://github.com/drbf17/octopus.git
@@ -15,7 +47,7 @@ yarn link    # 🔗 Torna o comando 'oct' disponível globalmente
 oct init
 ```
 
-> **💡 Importante:** O `yarn link` é essencial para que o comando `oct` funcione globalmente no terminal.
+> **⚠️ Windows:** Se `oct` não for reconhecido após `yarn link`, adicione o diretório Yarn ao PATH: `C:\Users\{seu-usuario}\AppData\Local\Yarn\bin`
 
 ## 📋 Comandos Disponíveis
 
@@ -89,6 +121,40 @@ meu-projeto/
 ├── Host/                                # Repositório clonado
 ├── Auth/                                # Repositório clonado
 └── Home/                                # Repositório clonado
+```
+
+## 🔧 Troubleshooting
+
+### Windows: Comando 'oct' não reconhecido
+```powershell
+# 1. Use o script automático (recomendado)
+.\install-windows.ps1
+
+# 2. Ou configure manualmente:
+# Verificar se yarn link funcionou
+yarn global list
+
+# 3. Adicionar Yarn bin ao PATH do usuário (SEM precisar de admin)
+[Environment]::SetEnvironmentVariable('PATH', [Environment]::GetEnvironmentVariable('PATH', 'User') + ';' + $env:LOCALAPPDATA + '\Yarn\bin', 'User')
+
+# 4. Reiniciar PowerShell e testar
+oct --help
+
+# 5. Alternativa: usar npx (funciona sempre)
+npx oct init
+```
+
+### macOS/Linux: Comando não encontrado
+```bash
+# 1. Verificar se yarn está no PATH
+which yarn
+
+# 2. Verificar yarn global bin
+yarn global bin
+
+# 3. Adicionar ao PATH (se necessário)
+echo 'export PATH="$(yarn global bin):$PATH"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ## 🔧 Sobre o Projeto
