@@ -54,12 +54,26 @@ class Octopus {
     try {
       const packageJsonPath = path.join(repoPath, 'package.json');
       if (!fs.existsSync(packageJsonPath)) {
+        console.log(chalk.red(`📄 package.json não encontrado: ${packageJsonPath}`));
         return false;
       }
       
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      return !!(packageJson.scripts && packageJson.scripts[scriptName]);
+      const hasScript = !!(packageJson.scripts && packageJson.scripts[scriptName]);
+      
+      console.log(chalk.blue(`📋 Scripts disponíveis em ${path.basename(repoPath)}:`));
+      if (packageJson.scripts) {
+        Object.keys(packageJson.scripts).forEach(script => {
+          const marker = script === scriptName ? '✅' : '  ';
+          console.log(chalk.gray(`   ${marker} ${script}: ${packageJson.scripts[script]}`));
+        });
+      } else {
+        console.log(chalk.gray(`   ❌ Nenhum script encontrado`));
+      }
+      
+      return hasScript;
     } catch (error) {
+      console.log(chalk.red(`❌ Erro ao ler package.json: ${error.message}`));
       return false;
     }
   }
@@ -69,18 +83,28 @@ class Octopus {
     if (repo.prefix) {
       const commandWithoutYarn = baseCommand.replace('yarn ', '');
       
-      // Verificar se o script com prefix existe
-      const scriptName = `${repo.prefix} ${commandWithoutYarn}`.trim();
+      // Verificar diferentes estratégias baseadas no comando
+      console.log(chalk.blue(`🔍 [${repo.name}] Analisando comando: ${baseCommand}`));
+      
+      // Estratégia 1: Verificar se existe script específico (ex: "host:install")
+      const prefixedScript = `${repo.prefix}:${commandWithoutYarn}`;
+      if (this.checkScriptExists(prefixedScript, repo.repoPath)) {
+        const finalCommand = `yarn ${prefixedScript}`;
+        console.log(chalk.green(`✅ [${repo.name}] Usando script: ${finalCommand}`));
+        return finalCommand;
+      }
+      
+      // Estratégia 2: Verificar se existe script genérico (ex: "host")
       if (this.checkScriptExists(repo.prefix, repo.repoPath)) {
         const finalCommand = `yarn ${repo.prefix} ${commandWithoutYarn}`;
-        console.log(chalk.magenta(`🔄 [${repo.name}] ${baseCommand} → ${finalCommand} (script encontrado)`));
+        console.log(chalk.yellow(`⚠️  [${repo.name}] Tentando: ${finalCommand} (pode falhar se script não aceita argumentos)`));
         return finalCommand;
-      } else {
-        // Tentar yarn workspace como alternativa
-        const workspaceCommand = `yarn workspace ${repo.prefix} ${commandWithoutYarn}`;
-        console.log(chalk.yellow(`⚠️  [${repo.name}] Script '${repo.prefix}' não encontrado, tentando: ${workspaceCommand}`));
-        return workspaceCommand;
       }
+      
+      // Estratégia 3: Tentar yarn workspace
+      const workspaceCommand = `yarn workspace ${repo.prefix} ${commandWithoutYarn}`;
+      console.log(chalk.cyan(`🔄 [${repo.name}] Tentando workspace: ${workspaceCommand}`));
+      return workspaceCommand;
     }
     return baseCommand;
   }
@@ -416,9 +440,16 @@ class Octopus {
             
             task.output = `Executando: ${fullCommand}`;
             
-            await this.runCommand(installCommand, installArgs, repo.repoPath, {
-              timeout: 180000 // 3 minutos por repo
-            });
+            // Tentar executar com fallback automático para repos com prefix
+            if (repo.prefix) {
+              await this.runCommandWithFallback(repo, 'install', {
+                timeout: 180000 // 3 minutos por repo
+              });
+            } else {
+              await this.runCommand(installCommand, installArgs, repo.repoPath, {
+                timeout: 180000 // 3 minutos por repo
+              });
+            }
             
             task.title = `✅ ${repo.name}: Dependências instaladas`;
             return { name: repo.name, success: true };
@@ -1363,6 +1394,61 @@ class Octopus {
         resolve();
       }
     });
+  }
+
+  // Método para tentar diferentes estratégias de comando com fallback automático
+  async runCommandWithFallback(repo, action, options = {}) {
+    const strategies = [
+      // Estratégia 1: Script específico (ex: "host:install")
+      {
+        name: 'Script específico',
+        command: `yarn ${repo.prefix}:${action}`,
+        check: () => this.checkScriptExists(`${repo.prefix}:${action}`, repo.repoPath)
+      },
+      // Estratégia 2: Yarn workspace
+      {
+        name: 'Yarn workspace',
+        command: `yarn workspace ${repo.prefix} ${action}`,
+        check: () => true // Sempre tentar
+      },
+      // Estratégia 3: Script genérico (pode não funcionar)
+      {
+        name: 'Script genérico',
+        command: `yarn ${repo.prefix} ${action}`,
+        check: () => this.checkScriptExists(repo.prefix, repo.repoPath)
+      },
+      // Estratégia 4: Comando direto no diretório
+      {
+        name: 'Comando direto',
+        command: `yarn ${action}`,
+        check: () => true
+      }
+    ];
+
+    for (const strategy of strategies) {
+      if (!strategy.check()) {
+        console.log(chalk.gray(`⏭️  [${repo.name}] Pulando estratégia: ${strategy.name}`));
+        continue;
+      }
+
+      console.log(chalk.blue(`🎯 [${repo.name}] Tentando estratégia: ${strategy.name}`));
+      console.log(chalk.gray(`   Comando: ${strategy.command}`));
+
+      try {
+        const [cmd, ...args] = strategy.command.split(' ');
+        await this.runCommand(cmd, args, repo.repoPath, options);
+        
+        console.log(chalk.green(`✅ [${repo.name}] Sucesso com estratégia: ${strategy.name}`));
+        return; // Sucesso, não precisa tentar outras estratégias
+        
+      } catch (error) {
+        console.log(chalk.red(`❌ [${repo.name}] Falhou estratégia: ${strategy.name}`));
+        console.log(chalk.red(`   Erro: ${error.message.split('\n')[0]}`));
+      }
+    }
+
+    // Se chegou aqui, todas as estratégias falharam
+    throw new Error(`Todas as estratégias falharam para ${repo.name} com prefix '${repo.prefix}'`);
   }
 
 
