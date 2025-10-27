@@ -4,74 +4,47 @@ Ferramenta CLI para gerenciar múltiplos repositórios React Native de forma efi
 
 ## 🚀 Instalação e Uso
 
-### 🖥️ Windows (PowerShell) - Instalação Automática
-```powershell
-# Opção 1: Script PowerShell (recomendado)
-.\install-windows.ps1
-
-# Opção 2: Script Batch
-.\install-windows.bat
-```
-
-### 🖥️ Windows (PowerShell) - Instalação Manual
-```powershell
-# 1. Clone e setup do Octopus
-git clone https://github.com/drbf17/octopus.git
-cd octopus
-yarn install
-yarn link
-
-# 2. Verificar se yarn está no PATH (essencial!)
-# Se não estiver, adicione: C:\Users\{seu-usuario}\AppData\Local\Yarn\bin
-$env:PATH += ";$env:LOCALAPPDATA\Yarn\bin"
-
-# 3. Reiniciar PowerShell ou executar:
-refreshenv
-
-# 4. Testar comando
-oct --help
-
-# 5. Setup completo automatizado
-oct init
-```
-
-### 🍎 macOS/Linux
+### ✅ Universal (Windows/macOS/Linux)
 ```bash
 # 1. Clone e setup do Octopus
 git clone https://github.com/drbf17/octopus.git
 cd octopus
 yarn install
-yarn link    # 🔗 Torna o comando 'oct' disponível globalmente
 
 # 2. Setup completo automatizado  
-oct init
+yarn oct init
+
+# 3. Uso diário
+yarn oct start      # Inicia todos os servidores
+yarn oct android    # Build Android + logs
+yarn oct ios        # Build iOS + logs
 ```
 
-> **⚠️ Windows:** Se `oct` não for reconhecido após `yarn link`, adicione o diretório Yarn ao PATH: `C:\Users\{seu-usuario}\AppData\Local\Yarn\bin`
+> **💡 Simples:** Não precisa de `yarn link`, `PATH` ou privilégios administrativos!
 
 ## 📋 Comandos Disponíveis
 
 | Comando | Descrição |
 |---------|-----------|
-| `oct init` | **Setup completo**: clone + install + VS Code workspace |
-| `oct clone` | Clona repositórios em falta |
-| `oct install` | yarn/npm install em paralelo (todos repos) |
-| `oct start` | Inicia todos os servidores em terminais separados |
-| `oct lint` | Lint em terminais separados por projeto |
-| `oct test` | Testes em terminais separados por projeto |
-| `oct android` | 🤖 Build Android + logs em terminais separados |
-| `oct ios` | 🍎 Build iOS + logs em terminais separados |
-| `oct update-sdk <version>` | 🔄 Atualiza SDK configurado em todos os módulos |
-| `oct checkout <branch>` | Checkout + pull em todos os repositórios |
-| `oct new-branch <name> [base]` | Cria nova branch em todos os repos |
-| `oct status` | Status Git de todos os repositórios |
-| `oct list` | Lista repositórios configurados |
+| `yarn oct init` | **Setup completo**: clone + install + VS Code workspace |
+| `yarn oct clone` | Clona repositórios em falta |
+| `yarn oct install` | yarn install em paralelo (todos repos) |
+| `yarn oct start` | Inicia todos os servidores em terminais separados |
+| `yarn oct lint` | Lint em terminais separados por projeto |
+| `yarn oct test` | Testes em terminais separados por projeto |
+| `yarn oct android` | 🤖 Build Android + logs em terminais separados |
+| `yarn oct ios` | 🍎 Build iOS + logs em terminais separados |
+| `yarn oct update-sdk <version>` | 🔄 Atualiza SDK configurado em todos os módulos |
+| `yarn oct checkout <branch>` | Checkout + pull em todos os repositórios |
+| `yarn oct new-branch <name> [base]` | Cria nova branch em todos os repos |
+| `yarn oct status` | Status Git de todos os repositórios |
+| `yarn oct list` | Lista repositórios configurados |
 
 ## � Exemplos de Uso
 
 ### Setup inicial completo
 ```bash
-oct init
+yarn oct init
 # ✅ Seleciona repositórios interativamente
 # ✅ Clona automaticamente
 # ✅ Instala dependências em paralelo  
@@ -81,26 +54,26 @@ oct init
 
 ### Desenvolvimento diário
 ```bash
-oct checkout develop    # Atualiza todos para develop
-oct start              # Inicia todos os servidores
+yarn oct checkout develop    # Atualiza todos para develop
+yarn oct start              # Inicia todos os servidores
 # Use VS Code Tasks: Cmd+Shift+P → "Tasks: Run Task"
 ```
 
 ### Desenvolvimento nativo (Host app)
 ```bash
-oct android            # 🤖 Abre 2 terminais: Build + Logs Android
-oct ios               # 🍎 Abre 2 terminais: Build + Logs iOS
+yarn oct android            # 🤖 Abre 2 terminais: Build + Logs Android
+yarn oct ios               # 🍎 Abre 2 terminais: Build + Logs iOS
 ```
 
 ### Atualização de SDK
 ```bash
-oct update-sdk 0.3.0  # 🔄 Atualiza SDK em todos os módulos
+yarn oct update-sdk 0.3.0  # 🔄 Atualiza SDK em todos os módulos
 # ✅ Atualiza package.json → yarn install → yarn fix-dependencies → yarn install
 ```
 
 ### Nova feature
 ```bash
-oct new-branch feature/login develop  # Cria branch em todos
+yarn oct new-branch feature/login develop  # Cria branch em todos
 # ... desenvolvimento ...
 oct lint               # Lint por projeto
 oct test              # Testes por projeto
@@ -123,46 +96,12 @@ meu-projeto/
 └── Home/                                # Repositório clonado
 ```
 
-## 🔧 Troubleshooting
-
-### Windows: Comando 'oct' não reconhecido
-```powershell
-# 1. Use o script automático (recomendado)
-.\install-windows.ps1
-
-# 2. Ou configure manualmente:
-# Verificar se yarn link funcionou
-yarn global list
-
-# 3. Adicionar Yarn bin ao PATH do usuário (SEM precisar de admin)
-[Environment]::SetEnvironmentVariable('PATH', [Environment]::GetEnvironmentVariable('PATH', 'User') + ';' + $env:LOCALAPPDATA + '\Yarn\bin', 'User')
-
-# 4. Reiniciar PowerShell e testar
-oct --help
-
-# 5. Alternativa: usar npx (funciona sempre)
-npx oct init
-```
-
-### macOS/Linux: Comando não encontrado
-```bash
-# 1. Verificar se yarn está no PATH
-which yarn
-
-# 2. Verificar yarn global bin
-yarn global bin
-
-# 3. Adicionar ao PATH (se necessário)
-echo 'export PATH="$(yarn global bin):$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
 ## 🔧 Sobre o Projeto
 
 ### Princípios
-- **Simplicidade**: Um comando (`oct init`) configura tudo
+- **Simplicidade**: Um comando (`yarn oct init`) configura tudo
 - **Cross-platform**: funciona no macOS, Windows e Linux  
-- **Inteligente**: detecta yarn/npm automaticamente
+- **Universal**: usa `yarn oct` que funciona em qualquer terminal
 - **Integrado**: gera workspace e tasks do VS Code
 - **Reutilizável**: facilmente adaptável para outros projetos
 

@@ -7,6 +7,7 @@
     "oct": "./bin/oct"
   },
   "scripts": {
+    "oct": "node bin/oct",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
