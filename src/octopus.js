@@ -840,61 +840,45 @@ class Octopus {
     
     const tasks = new Listr([
       {
-        title: 'Atualizando package.json em todos os módulos',
+        title: 'Atualizando dependência com yarn add',
         task: async (ctx, task) => {
-          const subtasks = validRepos.map(repo => ({
-            title: `${repo.name}: Atualizando package.json`,
-            task: async (subCtx, subtask) => {
+          const updateTasks = validRepos.map(repo => ({
+            title: `${repo.name}: yarn add ${sdkName}@${version} --dev`,
+            task: async () => {
               try {
-                const packageJsonPath = path.join(repo.repoPath, 'package.json');
+                // Comando para adicionar/atualizar a dependência
+                const addCommand = `add ${sdkName}@${version} --dev`;
+                const fullAddCmd = this.buildCommand(`yarn ${addCommand}`, repo);
+                const addCmdParts = fullAddCmd.split(' ');
                 
-                if (!fs.existsSync(packageJsonPath)) {
-                  subtask.skip(`package.json não encontrado`);
-                  return;
-                }
-
-                const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-                
-                // Verificar se a dependência existe
-                if (packageJson.dependencies && packageJson.dependencies[sdkName]) {
-                  const oldVersion = packageJson.dependencies[sdkName];
-                  packageJson.dependencies[sdkName] = `^${version}`;
-                  
-                  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
-                  subtask.title = `${repo.name}: ${oldVersion} → ^${version}`;
-                } else {
-                  subtask.skip('SDK não encontrado nas dependências');
-                }
+                await this.runCommand(addCmdParts[0], addCmdParts.slice(1), repo.repoPath, { timeout: 180000 });
               } catch (error) {
-                throw new Error(`Erro ao atualizar ${repo.name}: ${error.message}`);
+                throw new Error(`Erro ao atualizar dependência em ${repo.name}: ${error.message}`);
               }
             }
           }));
 
-          return task.newListr(subtasks, { concurrent: true });
+          return task.newListr(updateTasks, { concurrent: true });
         }
       },
       {
-        title: 'Executando comandos de instalação sequencialmente',
+        title: 'Executando comandos de finalização sequencialmente',
         task: async (ctx, task) => {
-          const installTasks = [];
+          const finalizationTasks = [];
           
           for (const repo of validRepos) {
-            // Usar apenas yarn conforme política do octopus
-            const commands = sdkConfig.updateCommands.yarn;
+            // Comandos de finalização em ordem específica
+            const commands = ['yarn fix-dependencies', 'yarn install'];
 
-            // Executar comandos da configuração sequencialmente
-            commands.forEach((cmd, index) => {
+            commands.forEach(cmd => {
               const fullCmd = this.buildCommand(cmd, repo);
               const cmdParts = fullCmd.split(' ');
-              const command = cmdParts[0];
-              const args = cmdParts.slice(1);
               
-              installTasks.push({
+              finalizationTasks.push({
                 title: `${repo.name}: ${fullCmd}`,
                 task: async () => {
                   try {
-                    await this.runCommand(command, args, repo.repoPath, { timeout: 180000 });
+                    await this.runCommand(cmdParts[0], cmdParts.slice(1), repo.repoPath, { timeout: 180000 });
                   } catch (error) {
                     if (cmd.includes('fix-dependencies')) {
                       // fix-dependencies pode não existir, não é erro crítico
@@ -908,7 +892,7 @@ class Octopus {
             });
           }
 
-          return task.newListr(installTasks, { concurrent: false }); // Sequencial
+          return task.newListr(finalizationTasks, { concurrent: false }); // Sequencial
         }
       }
     ], {
