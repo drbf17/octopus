@@ -708,60 +708,58 @@ class Octopus {
     console.log(chalk.cyan(`📱 Executando Android no Host: ${hostRepo.name}`));
     
     try {
-      console.log(chalk.blue(`🔍 [${hostRepo.name}] Tentando executar comando Android...`));
+      console.log(chalk.blue(`� Preparando build Android para ${hostRepo.name}...`));
       
-      // Tentar diferentes estratégias para o comando android
-      let androidCommandExecuted = false;
+      // Determinar comando correto baseado no prefix
+      const androidCommand = this.buildCommand('yarn android', hostRepo);
       
-      if (hostRepo.prefix) {
-        console.log(chalk.cyan(`🎯 Tentando executar Android com fallback automático...`));
-        try {
-          await this.runCommandWithFallback(hostRepo, 'android', { timeout: 30000 });
-          androidCommandExecuted = true;
-          console.log(chalk.green(`✅ Comando Android executado com sucesso!`));
-        } catch (error) {
-          console.log(chalk.red(`❌ Falha ao executar comando Android: ${error.message}`));
-        }
-      }
+      console.log(chalk.cyan(`🔧 Comando que será executado: ${androidCommand}`));
       
-      // Se não conseguiu executar ou não tem prefix, tentar abrir terminal
-      if (!androidCommandExecuted) {
-        const androidCommand = this.buildCommand('yarn android', hostRepo);
-        console.log(chalk.blue(`🔧 Abrindo terminal com: ${androidCommand}`));
-        await this.openTerminalImproved(`Android-Build-${hostRepo.name}`, hostRepo.repoPath, androidCommand);
-      }
+      // SEMPRE abrir terminal para build - permite acompanhamento visual
+      console.log(chalk.blue(`� Abrindo terminal para build Android...`));
+      await this.openTerminalImproved(`Android-Build-${hostRepo.name}`, hostRepo.repoPath, androidCommand);
       
-      // Tentar comando de logs com fallback também
+      // Abrir terminal de logs Android (com delay para não conflitar com build)
       setTimeout(async () => {
         try {
-          console.log(chalk.blue(`📋 Tentando abrir logs Android...`));
+          console.log(chalk.blue(`📋 Abrindo terminal para logs Android...`));
           
-          let logCommand = 'npx react-native log-android';
-          
-          // Se tem prefix, tentar com prefix também
+          // Determinar comando de logs baseado no prefix
+          let logCommand;
           if (hostRepo.prefix) {
-            const prefixLogCommand = `yarn ${hostRepo.prefix} log-android`;
-            console.log(chalk.cyan(`🎯 Tentando logs com prefix: ${prefixLogCommand}`));
-            
-            try {
-              await this.openTerminalImproved(`Android-Logs-${hostRepo.name}`, hostRepo.repoPath, prefixLogCommand);
-              return;
-            } catch (error) {
-              console.log(chalk.yellow(`⚠️  Comando com prefix falhou, tentando npx...`));
-            }
+            // Tentar primeiro com prefix (ex: yarn host log-android)
+            logCommand = `yarn ${hostRepo.prefix} log-android`;
+            console.log(chalk.cyan(`🎯 Usando comando com prefix: ${logCommand}`));
+          } else {
+            // Fallback para npx
+            logCommand = 'npx react-native log-android';
+            console.log(chalk.cyan(`🔧 Usando comando padrão: ${logCommand}`));
           }
           
-          // Fallback para comando npx
           await this.openTerminalImproved(`Android-Logs-${hostRepo.name}`, hostRepo.repoPath, logCommand);
+          console.log(chalk.green(`✅ Terminal de logs Android aberto!`));
         } catch (error) {
           console.log(chalk.yellow(`⚠️  Não foi possível abrir logs Android: ${error.message}`));
+          
+          // Tentar fallback se o comando com prefix falhar
+          if (hostRepo.prefix) {
+            try {
+              console.log(chalk.cyan(`🔄 Tentando fallback: npx react-native log-android`));
+              await this.openTerminalImproved(`Android-Logs-${hostRepo.name}`, hostRepo.repoPath, 'npx react-native log-android');
+            } catch (fallbackError) {
+              console.log(chalk.red(`❌ Fallback também falhou: ${fallbackError.message}`));
+            }
+          }
         }
-      }, 2000);
+      }, 3000);
       
-      console.log(chalk.green('✅ Terminais Android abertos com sucesso!'));
-      console.log(chalk.cyan('   📱 Terminal 1: Build Android'));
-      console.log(chalk.cyan('   📋 Terminal 2: Logs Android'));
-      console.log(chalk.blue('💡 Certifique-se de ter um emulador rodando ou device conectado.'));
+      console.log(chalk.green('\n✅ Build Android iniciado!'));
+      console.log(chalk.cyan('📱 Terminal de build: Acompanhe o progresso em tempo real'));
+      console.log(chalk.cyan('📋 Terminal de logs: Será aberto em 3 segundos'));
+      console.log(chalk.blue('\n💡 Dicas importantes:'));
+      console.log(chalk.gray('   • Certifique-se de ter um emulador rodando ou device conectado'));
+      console.log(chalk.gray('   • O build pode demorar alguns minutos na primeira vez'));
+      console.log(chalk.gray('   • Monitore ambos os terminais para possíveis erros'));
     } catch (error) {
       console.error(chalk.red(`❌ Erro ao abrir Android: ${error.message}`));
     }
@@ -781,60 +779,58 @@ class Octopus {
     console.log(chalk.cyan(`📱 Executando iOS no Host: ${hostRepo.name}`));
     
     try {
-      console.log(chalk.blue(`🔍 [${hostRepo.name}] Tentando executar comando iOS...`));
+      console.log(chalk.blue(`� Preparando build iOS para ${hostRepo.name}...`));
       
-      // Tentar diferentes estratégias para o comando ios
-      let iosCommandExecuted = false;
+      // Determinar comando correto baseado no prefix
+      const iosCommand = this.buildCommand('yarn ios', hostRepo);
       
-      if (hostRepo.prefix) {
-        console.log(chalk.cyan(`🎯 Tentando executar iOS com fallback automático...`));
-        try {
-          await this.runCommandWithFallback(hostRepo, 'ios', { timeout: 30000 });
-          iosCommandExecuted = true;
-          console.log(chalk.green(`✅ Comando iOS executado com sucesso!`));
-        } catch (error) {
-          console.log(chalk.red(`❌ Falha ao executar comando iOS: ${error.message}`));
-        }
-      }
+      console.log(chalk.cyan(`🔧 Comando que será executado: ${iosCommand}`));
       
-      // Se não conseguiu executar ou não tem prefix, tentar abrir terminal
-      if (!iosCommandExecuted) {
-        const iosCommand = this.buildCommand('yarn ios', hostRepo);
-        console.log(chalk.blue(`🔧 Abrindo terminal com: ${iosCommand}`));
-        await this.openTerminalImproved(`iOS-Build-${hostRepo.name}`, hostRepo.repoPath, iosCommand);
-      }
+      // SEMPRE abrir terminal para build - permite acompanhamento visual
+      console.log(chalk.blue(`� Abrindo terminal para build iOS...`));
+      await this.openTerminalImproved(`iOS-Build-${hostRepo.name}`, hostRepo.repoPath, iosCommand);
       
-      // Tentar comando de logs com fallback também
+      // Abrir terminal de logs iOS (com delay para não conflitar com build)
       setTimeout(async () => {
         try {
-          console.log(chalk.blue(`📋 Tentando abrir logs iOS...`));
+          console.log(chalk.blue(`📋 Abrindo terminal para logs iOS...`));
           
-          let logCommand = 'npx react-native log-ios';
-          
-          // Se tem prefix, tentar com prefix também
+          // Determinar comando de logs baseado no prefix
+          let logCommand;
           if (hostRepo.prefix) {
-            const prefixLogCommand = `yarn ${hostRepo.prefix} log-ios`;
-            console.log(chalk.cyan(`🎯 Tentando logs com prefix: ${prefixLogCommand}`));
-            
-            try {
-              await this.openTerminalImproved(`iOS-Logs-${hostRepo.name}`, hostRepo.repoPath, prefixLogCommand);
-              return;
-            } catch (error) {
-              console.log(chalk.yellow(`⚠️  Comando com prefix falhou, tentando npx...`));
-            }
+            // Tentar primeiro com prefix (ex: yarn host log-ios)
+            logCommand = `yarn ${hostRepo.prefix} log-ios`;
+            console.log(chalk.cyan(`🎯 Usando comando com prefix: ${logCommand}`));
+          } else {
+            // Fallback para npx
+            logCommand = 'npx react-native log-ios';
+            console.log(chalk.cyan(`🔧 Usando comando padrão: ${logCommand}`));
           }
           
-          // Fallback para comando npx
           await this.openTerminalImproved(`iOS-Logs-${hostRepo.name}`, hostRepo.repoPath, logCommand);
+          console.log(chalk.green(`✅ Terminal de logs iOS aberto!`));
         } catch (error) {
           console.log(chalk.yellow(`⚠️  Não foi possível abrir logs iOS: ${error.message}`));
+          
+          // Tentar fallback se o comando com prefix falhar
+          if (hostRepo.prefix) {
+            try {
+              console.log(chalk.cyan(`🔄 Tentando fallback: npx react-native log-ios`));
+              await this.openTerminalImproved(`iOS-Logs-${hostRepo.name}`, hostRepo.repoPath, 'npx react-native log-ios');
+            } catch (fallbackError) {
+              console.log(chalk.red(`❌ Fallback também falhou: ${fallbackError.message}`));
+            }
+          }
         }
-      }, 2000);
+      }, 3000);
       
-      console.log(chalk.green('✅ Terminais iOS abertos com sucesso!'));
-      console.log(chalk.cyan('   📱 Terminal 1: Build iOS'));
-      console.log(chalk.cyan('   📋 Terminal 2: Logs iOS'));
-      console.log(chalk.blue('💡 Certifique-se de ter o Xcode e simulador configurados.'));
+      console.log(chalk.green('\n✅ Build iOS iniciado!'));
+      console.log(chalk.cyan('📱 Terminal de build: Acompanhe o progresso em tempo real'));
+      console.log(chalk.cyan('📋 Terminal de logs: Será aberto em 3 segundos'));
+      console.log(chalk.blue('\n💡 Dicas importantes:'));
+      console.log(chalk.gray('   • Certifique-se de ter o Xcode e simulador configurados'));
+      console.log(chalk.gray('   • O build pode demorar alguns minutos na primeira vez'));
+      console.log(chalk.gray('   • Monitore ambos os terminais para possíveis erros'));
     } catch (error) {
       console.error(chalk.red(`❌ Erro ao abrir iOS: ${error.message}`));
     }
