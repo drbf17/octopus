@@ -49,6 +49,16 @@ class Octopus {
     this.defaultRepos = this.loadDefaultRepos();
   }
 
+  // Helper para construir comandos com prefixo opcional
+  buildCommand(baseCommand, repo) {
+    if (repo.prefix) {
+      // Se tem prefixo, usa: yarn prefix comando
+      // Ex: yarn host install
+      return `yarn ${repo.prefix} ${baseCommand.replace('yarn ', '')}`;
+    }
+    return baseCommand;
+  }
+
   loadConfig() {
     try {
       if (fs.existsSync(this.configPath)) {
@@ -368,10 +378,10 @@ class Octopus {
       task: async (ctx, task) => {
         return limit(async () => {
           try {
-            task.output = `Usando yarn...`;
+            task.output = `Usando yarn${repo.prefix ? ` ${repo.prefix}` : ''}...`;
             
-            const installCommand = 'yarn';
-            const installArgs = ['install'];
+            const fullCommand = this.buildCommand('yarn install', repo);
+            const [installCommand, ...installArgs] = fullCommand.split(' ');
             
             await this.runCommand(installCommand, installArgs, repo.repoPath, {
               timeout: 180000 // 3 minutos por repo
@@ -428,7 +438,7 @@ class Octopus {
 
     // Usar yarn conforme política do octopus
     const commands = validRepos.map(repo => {
-      const startCommand = 'yarn start';
+      const startCommand = this.buildCommand('yarn start', repo);
       
       return {
         name: `${repo.name}:${repo.port}`,
@@ -488,7 +498,8 @@ class Octopus {
       console.log(chalk.cyan(`🚀 Iniciando ${repo.name} na porta ${repo.port}`));
 
       try {
-        await this.openTerminalImproved(repo.name, repo.repoPath, 'yarn start');
+        const startCommand = this.buildCommand('yarn start', repo);
+        await this.openTerminalImproved(repo.name, repo.repoPath, startCommand);
       } catch (error) {
         console.error(chalk.red(`⚠️  Erro ao abrir terminal para ${repo.name}: ${error.message}`));
       }
@@ -553,7 +564,7 @@ class Octopus {
         if (scripts.lint) {
           hasLint = true;
           // Usar yarn conforme política do octopus
-          lintCommand = 'yarn lint';
+          lintCommand = this.buildCommand('yarn lint', repo);
         }
       }
 
@@ -606,7 +617,7 @@ class Octopus {
         if (scripts.test && !scripts.test.includes('no test specified')) {
           hasTest = true;
           // Usar yarn conforme política do octopus
-          testCommand = 'yarn test';
+          testCommand = this.buildCommand('yarn test', repo);
         }
       }
 
@@ -649,7 +660,7 @@ class Octopus {
     
     try {
       // Usar yarn conforme política do octopus
-      const androidCommand = 'yarn android';
+      const androidCommand = this.buildCommand('yarn android', hostRepo);
       const logCommand = 'npx react-native log-android';
       
       // Abrir terminal para build Android
@@ -688,7 +699,7 @@ class Octopus {
     
     try {
       // Usar yarn conforme política do octopus
-      const iosCommand = 'yarn ios';
+      const iosCommand = this.buildCommand('yarn ios', hostRepo);
       const logCommand = 'npx react-native log-ios';
       
       // Abrir terminal para build iOS
@@ -785,19 +796,20 @@ class Octopus {
 
             // Executar comandos da configuração sequencialmente
             commands.forEach((cmd, index) => {
-              const cmdParts = cmd.split(' ');
+              const fullCmd = this.buildCommand(cmd, repo);
+              const cmdParts = fullCmd.split(' ');
               const command = cmdParts[0];
               const args = cmdParts.slice(1);
               
               installTasks.push({
-                title: `${repo.name}: ${cmd}`,
+                title: `${repo.name}: ${fullCmd}`,
                 task: async () => {
                   try {
                     await this.runCommand(command, args, repo.repoPath, { timeout: 180000 });
                   } catch (error) {
                     if (cmd.includes('fix-dependencies')) {
                       // fix-dependencies pode não existir, não é erro crítico
-                      console.log(chalk.yellow(`⚠️  ${repo.name}: ${cmd} não disponível`));
+                      console.log(chalk.yellow(`⚠️  ${repo.name}: ${fullCmd} não disponível`));
                     } else {
                       throw error;
                     }

@@ -11,10 +11,14 @@ git clone https://github.com/drbf17/octopus.git
 cd octopus
 yarn install
 
-# 2. Setup completo automatizado  
-yarn oct init
+# 2. Setup completo automatizado (OBRIGATÓRIO antes de start)
+yarn oct init       # Clona repos + instala dependências
+yarn oct install    # Se precisar reinstalar dependências
 
-# 3. Uso diário
+# 3. Verificar se tudo está instalado
+yarn oct list       # Lista status dos repositórios
+
+# 4. Uso diário
 yarn oct start      # Inicia todos os servidores
 yarn oct android    # Build Android + logs
 yarn oct ios        # Build iOS + logs
@@ -49,13 +53,21 @@ yarn oct init
 # ✅ Clona automaticamente
 # ✅ Instala dependências em paralelo  
 # ✅ Cria workspace VS Code
-# ✅ Configura tasks automáticas
 ```
 
-### Desenvolvimento diário
+### Desenvolvimento diário (IMPORTANTE: sempre instalar antes de iniciar!)
+```bash
+# 1. PRIMEIRO: Instalar/atualizar dependências
+yarn oct install
+
+# 2. DEPOIS: Iniciar todos os servidores
+yarn oct start
+# ✅ Executa todos em paralelo no terminal
+```
+
+### Outros comandos úteis
 ```bash
 yarn oct checkout develop    # Atualiza todos para develop
-yarn oct start              # Inicia todos os servidores
 # Use VS Code Tasks: Cmd+Shift+P → "Tasks: Run Task"
 ```
 
@@ -94,6 +106,38 @@ meu-projeto/
 ├── Host/                                # Repositório clonado
 ├── Auth/                                # Repositório clonado
 └── Home/                                # Repositório clonado
+```
+
+## 🔧 Troubleshooting
+
+### ❌ Erro: "Unable to find React Native files"
+```bash
+# Problema: Dependências não instaladas nos micro apps
+# Solução:
+yarn oct install        # Instala dependências em todos os repos
+yarn oct list          # Verifica status dos repositórios
+
+# Se persistir:
+cd ../Auth && yarn install
+cd ../Home && yarn install  
+cd ../Contas && yarn install
+cd ../Host && yarn install
+```
+
+### ⚠️ Erro: "yarn start exited with code 1"
+```bash
+# Geralmente indica dependências faltando ou corrompidas
+yarn oct install       # Reinstala tudo
+yarn oct start         # Tenta novamente
+
+# Alternativa: modo separado para debug
+yarn oct start --mode separate
+```
+
+### 🔍 Verificar se tudo está funcionando
+```bash
+yarn oct list          # Status de todos os repos
+yarn oct status        # Status Git de todos os repos
 ```
 
 ## 🔧 Sobre o Projeto

@@ -8,6 +8,7 @@
       "port": 8081,
       "priority": 1,
       "isHost": true,
+      "prefix": "host",
       "description": "Host application - Main container for micro apps"
     },
     {
