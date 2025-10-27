@@ -1394,14 +1394,37 @@ class Octopus {
           args = ['-e', appleScript];
           console.log(chalk.cyan(`🍎 Usando Terminal.app no macOS`));
         } else if (platform === 'win32') {
-          // Windows - comando simplificado e mais confiável
-          const windowsCommand = `cd /d "${cwd}" && echo [OCTOPUS] ${name} - Iniciando... && echo Comando: ${command} && echo ======================================== && ${command}`;
+          // Windows - usar arquivo batch temporário para evitar problemas com concatenação
+          const tempDir = require('os').tmpdir();
+          const batchFile = path.join(tempDir, `octopus-${name.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}.bat`);
+          
+          const batchContent = `@echo off
+cd /d "${cwd}"
+echo [OCTOPUS] ${name} - Iniciando...
+echo Comando: ${command}
+echo ========================================
+${command}
+pause`;
+
+          // Criar arquivo batch temporário
+          fs.writeFileSync(batchFile, batchContent);
+          
+          // Limpar arquivo batch depois de 30 segundos
+          setTimeout(() => {
+            try {
+              if (fs.existsSync(batchFile)) {
+                fs.unlinkSync(batchFile);
+              }
+            } catch (error) {
+              // Ignorar erros de limpeza
+            }
+          }, 30000);
           
           terminalCommand = 'cmd';
-          args = ['/c', 'start', `"${name}"`, 'cmd', '/k', windowsCommand];
+          args = ['/c', 'start', `"${name}"`, 'cmd', '/k', `"${batchFile}"`];
           
-          console.log(chalk.cyan(`🪟 Usando CMD no Windows`));
-          console.log(chalk.gray(`   Comando Windows: ${windowsCommand}`));
+          console.log(chalk.cyan(`🪟 Usando CMD no Windows com arquivo batch`));
+          console.log(chalk.gray(`   Arquivo batch: ${batchFile}`));
         } else {
           // Linux - tentar múltiplos terminais com títulos
           const terminals = [
@@ -1517,12 +1540,38 @@ class Octopus {
           return;
         }
         
+        // Criar arquivo batch temporário para fallback também
         const { spawn } = require('child_process');
-        const simpleCmd = `cmd /c "cd /d \\"${cwd}\\" && echo === ${name} === && echo Diretorio: ${cwd} && echo Comando: ${command} && echo. && ${command} && pause"`;
+        const tempDir = require('os').tmpdir();
+        const fallbackBatchFile = path.join(tempDir, `octopus-fallback-${name.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}.bat`);
         
-        console.log(chalk.gray(`   Comando simples: ${simpleCmd}`));
+        const fallbackBatchContent = `@echo off
+echo === OCTOPUS FALLBACK - ${name} ===
+cd /d "${cwd}"
+echo Diretorio atual: %CD%
+echo Comando: ${command}
+echo.
+${command}
+echo.
+echo Pressione qualquer tecla para fechar...
+pause >nul`;
+
+        fs.writeFileSync(fallbackBatchFile, fallbackBatchContent);
         
-        spawn('cmd', ['/c', 'start', `"${name}"`, 'cmd', '/k', `cd /d "${cwd}" && echo === ${name} === && echo Diretorio: ${cwd} && echo Comando: ${command} && echo. && ${command}`], {
+        // Limpar arquivo batch fallback depois de 30 segundos
+        setTimeout(() => {
+          try {
+            if (fs.existsSync(fallbackBatchFile)) {
+              fs.unlinkSync(fallbackBatchFile);
+            }
+          } catch (error) {
+            // Ignorar erros de limpeza
+          }
+        }, 30000);
+        
+        console.log(chalk.gray(`   Arquivo batch fallback: ${fallbackBatchFile}`));
+        
+        spawn('cmd', ['/c', 'start', `"${name} (Fallback)"`, 'cmd', '/k', `"${fallbackBatchFile}"`], {
           detached: true,
           stdio: 'ignore'
         });
