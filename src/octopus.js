@@ -724,32 +724,16 @@ class Octopus {
         try {
           console.log(chalk.blue(`📋 Abrindo terminal para logs Android...`));
           
-          // Determinar comando de logs baseado no prefix
-          let logCommand;
-          if (hostRepo.prefix) {
-            // Tentar primeiro com prefix (ex: yarn host log-android)
-            logCommand = `yarn ${hostRepo.prefix} log-android`;
-            console.log(chalk.cyan(`🎯 Usando comando com prefix: ${logCommand}`));
-          } else {
-            // Fallback para npx
-            logCommand = 'npx react-native log-android';
-            console.log(chalk.cyan(`🔧 Usando comando padrão: ${logCommand}`));
-          }
+          // Comando de log sempre executado na pasta do octopus
+          const logCommand = 'yarn react-native log-android';
+          console.log(chalk.cyan(`🔧 Comando de log: ${logCommand}`));
           
-          await this.openTerminalImproved(`Android-Logs-${hostRepo.name}`, hostRepo.repoPath, logCommand);
+          // Executar na pasta atual do octopus, não no diretório do Host
+          const octopusPath = process.cwd();
+          await this.openTerminalImproved(`Android-Logs`, octopusPath, logCommand);
           console.log(chalk.green(`✅ Terminal de logs Android aberto!`));
         } catch (error) {
           console.log(chalk.yellow(`⚠️  Não foi possível abrir logs Android: ${error.message}`));
-          
-          // Tentar fallback se o comando com prefix falhar
-          if (hostRepo.prefix) {
-            try {
-              console.log(chalk.cyan(`🔄 Tentando fallback: npx react-native log-android`));
-              await this.openTerminalImproved(`Android-Logs-${hostRepo.name}`, hostRepo.repoPath, 'npx react-native log-android');
-            } catch (fallbackError) {
-              console.log(chalk.red(`❌ Fallback também falhou: ${fallbackError.message}`));
-            }
-          }
         }
       }, 3000);
       
@@ -795,32 +779,16 @@ class Octopus {
         try {
           console.log(chalk.blue(`📋 Abrindo terminal para logs iOS...`));
           
-          // Determinar comando de logs baseado no prefix
-          let logCommand;
-          if (hostRepo.prefix) {
-            // Tentar primeiro com prefix (ex: yarn host log-ios)
-            logCommand = `yarn ${hostRepo.prefix} log-ios`;
-            console.log(chalk.cyan(`🎯 Usando comando com prefix: ${logCommand}`));
-          } else {
-            // Fallback para npx
-            logCommand = 'npx react-native log-ios';
-            console.log(chalk.cyan(`🔧 Usando comando padrão: ${logCommand}`));
-          }
+          // Comando de log sempre executado na pasta do octopus
+          const logCommand = 'yarn react-native log-ios';
+          console.log(chalk.cyan(`🔧 Comando de log: ${logCommand}`));
           
-          await this.openTerminalImproved(`iOS-Logs-${hostRepo.name}`, hostRepo.repoPath, logCommand);
+          // Executar na pasta atual do octopus, não no diretório do Host
+          const octopusPath = process.cwd();
+          await this.openTerminalImproved(`iOS-Logs`, octopusPath, logCommand);
           console.log(chalk.green(`✅ Terminal de logs iOS aberto!`));
         } catch (error) {
           console.log(chalk.yellow(`⚠️  Não foi possível abrir logs iOS: ${error.message}`));
-          
-          // Tentar fallback se o comando com prefix falhar
-          if (hostRepo.prefix) {
-            try {
-              console.log(chalk.cyan(`🔄 Tentando fallback: npx react-native log-ios`));
-              await this.openTerminalImproved(`iOS-Logs-${hostRepo.name}`, hostRepo.repoPath, 'npx react-native log-ios');
-            } catch (fallbackError) {
-              console.log(chalk.red(`❌ Fallback também falhou: ${fallbackError.message}`));
-            }
-          }
         }
       }, 3000);
       
