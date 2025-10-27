@@ -1,16 +1,38 @@
 {
   "sdkDependency": "@drbf17/react-native-webview",
   "description": "Configuração do SDK padrão para atualização nos módulos",
-  "updateCommands": {
-    "yarn": [
-      "yarn install",
-      "yarn fix-dependencies", 
-      "yarn install"
-    ]
-  },
+  "updateStrategy": "yarn-add",
+  "dependencyType": "--dev",
+  "finalizationCommands": [
+    "yarn fix-dependencies",
+    "yarn install"
+  ],
   "supportedVersionFormats": [
     "^x.x.x",
     "~x.x.x", 
     "x.x.x"
-  ]
+  ],
+  "workflow": {
+    "description": "Nova estratégia de atualização usando yarn add nativo",
+    "phases": [
+      {
+        "name": "update",
+        "description": "Atualizar dependência usando yarn add",
+        "execution": "parallel",
+        "commands": {
+          "normal": "yarn add {dependency}@{version} {type}",
+          "withPrefix": "yarn {prefix} add {dependency}@{version} {type}"
+        }
+      },
+      {
+        "name": "finalization", 
+        "description": "Executar comandos de finalização",
+        "execution": "sequential",
+        "commands": {
+          "normal": ["yarn fix-dependencies", "yarn install"],
+          "withPrefix": ["yarn {prefix} fix-dependencies", "yarn {prefix} install"]
+        }
+      }
+    ]
+  }
 }

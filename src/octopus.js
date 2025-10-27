@@ -823,10 +823,11 @@ class Octopus {
       console.log(chalk.red('❌ Erro ao carregar configuração do SDK. Usando padrão.'));
       sdkConfig = {
         sdkDependency: '@drbf17/react-native-webview',
-        updateCommands: {
-          yarn: ['yarn install', 'yarn fix-dependencies', 'yarn install'],
-          npm: ['npm install', 'npm run fix-dependencies', 'npm install']
-        }
+        dependencyType: '--dev',
+        finalizationCommands: [
+          'yarn fix-dependencies',
+          'yarn install'
+        ]
       };
     }
     
