@@ -1361,6 +1361,11 @@ class Octopus {
   }
 
   async openTerminalImproved(name, cwd, command) {
+    console.log(chalk.blue(`🔧 Tentando abrir terminal: ${name}`));
+    console.log(chalk.gray(`   📁 Diretório: ${cwd}`));
+    console.log(chalk.gray(`   ⚡ Comando: ${command}`));
+    console.log(chalk.gray(`   🖥️  Platform: ${process.platform}`));
+    
     return new Promise((resolve) => {
       try {
         const platform = process.platform;
@@ -1368,69 +1373,100 @@ class Octopus {
         let args;
 
         if (platform === 'darwin') {
-          // macOS - AppleScript melhorado com tratamento de erro
+          // macOS - AppleScript melhorado com tratamento de erro e titulo
           const appleScript = `
             tell application "Terminal"
               activate
               set newTab to do script "cd '${cwd.replace(/'/g, "'\\''")}'"
-              delay 0.5
-              do script "echo '🐙 ${name} - Iniciando...' && ${command}" in newTab
+              delay 1
+              set custom title of newTab to "${name}"
+              do script "clear && echo '🐙 ${name} - Executando comando...' && echo 'Comando: ${command}' && echo '----------------------------------------' && ${command}" in newTab
             end tell
           `;
           terminalCommand = 'osascript';
           args = ['-e', appleScript];
+          console.log(chalk.cyan(`🍎 Usando Terminal.app no macOS`));
         } else if (platform === 'win32') {
-          // Windows - usando & em vez de && para compatibilidade com cmd
+          // Windows - melhorado com título
           terminalCommand = 'cmd';
-          args = ['/c', 'start', 'cmd', '/k', `cd /d "${cwd}" & echo [OCTOPUS] ${name} - Iniciando... & ${command}`];
+          args = ['/c', 'start', '"' + name + '"', 'cmd', '/k', `cd /d "${cwd}" & echo [OCTOPUS] ${name} - Executando... & echo Comando: ${command} & echo ---------------------------------------- & ${command}`];
+          console.log(chalk.cyan(`🪟 Usando CMD no Windows`));
         } else {
-          // Linux - tentar múltiplos terminais
+          // Linux - tentar múltiplos terminais com títulos
           const terminals = [
-            ['gnome-terminal', ['--working-directory', cwd, '--', 'bash', '-c', `echo '🐙 ${name} - Iniciando...' && ${command}; exec bash`]],
-            ['xterm', ['-e', `bash -c "cd '${cwd}' && echo '🐙 ${name} - Iniciando...' && ${command}; exec bash"`]],
-            ['konsole', ['--workdir', cwd, '-e', `bash -c "echo '🐙 ${name} - Iniciando...' && ${command}; exec bash"`]]
+            ['gnome-terminal', ['--title', name, '--working-directory', cwd, '--', 'bash', '-c', `clear && echo '🐙 ${name} - Executando comando...' && echo 'Comando: ${command}' && echo '----------------------------------------' && ${command}; exec bash`]],
+            ['xterm', ['-title', name, '-e', `bash -c "cd '${cwd}' && clear && echo '🐙 ${name} - Executando comando...' && echo 'Comando: ${command}' && echo '----------------------------------------' && ${command}; exec bash"`]],
+            ['konsole', ['--workdir', cwd, '--title', name, '-e', `bash -c "clear && echo '🐙 ${name} - Executando comando...' && echo 'Comando: ${command}' && echo '----------------------------------------' && ${command}; exec bash"`]]
           ];
           
           let terminalFound = false;
           for (const [terminal, termArgs] of terminals) {
             try {
+              console.log(chalk.cyan(`🐧 Tentando terminal: ${terminal}`));
               terminalCommand = terminal;
               args = termArgs;
               terminalFound = true;
               break;
             } catch (e) {
+              console.log(chalk.yellow(`⚠️  ${terminal} não disponível`));
               continue;
             }
           }
           
           if (!terminalFound) {
-            console.warn(chalk.yellow(`⚠️  Nenhum terminal compatível encontrado para ${name}`));
+            console.warn(chalk.red(`❌ Nenhum terminal compatível encontrado para ${name}`));
+            console.log(chalk.yellow(`💡 Instale: sudo apt install gnome-terminal`));
             resolve();
             return;
           }
         }
 
+        console.log(chalk.blue(`🚀 Executando: ${terminalCommand} ${args.join(' ')}`));
+        
         // Executar comando com timeout
         const childProcess = spawn(terminalCommand, args, {
-          stdio: 'ignore', // Ignorar output para evitar problemas
+          stdio: ['ignore', 'pipe', 'pipe'], // Capturar output para debug
           detached: true,  // Processo independente
           shell: platform === 'win32'
         });
 
+        // Capturar stderr para debug
+        let errorOutput = '';
+        childProcess.stderr?.on('data', (data) => {
+          errorOutput += data.toString();
+        });
+
         // Timeout para não travar
         const timeout = setTimeout(() => {
+          console.log(chalk.green(`✅ Terminal ${name} processado (timeout)`));
           resolve();
-        }, 3000);
+        }, 5000);
 
         childProcess.on('spawn', () => {
           clearTimeout(timeout);
+          console.log(chalk.green(`✅ Terminal ${name} aberto com sucesso! (PID: ${childProcess.pid})`));
           resolve();
         });
 
         childProcess.on('error', (error) => {
           clearTimeout(timeout);
-          console.warn(chalk.yellow(`⚠️  Erro ao abrir terminal para ${name}: ${error.message}`));
-          resolve();
+          console.error(chalk.red(`❌ Erro ao abrir terminal ${name}: ${error.message}`));
+          if (errorOutput) {
+            console.error(chalk.red(`   Stderr: ${errorOutput}`));
+          }
+          
+          // Tentar fallback simples
+          console.log(chalk.yellow(`🔄 Tentando fallback para ${name}...`));
+          this.openTerminalFallback(name, cwd, command).then(resolve);
+        });
+
+        childProcess.on('close', (code) => {
+          if (code !== 0) {
+            console.log(chalk.yellow(`⚠️  Terminal ${name} fechou com código: ${code}`));
+            if (errorOutput) {
+              console.log(chalk.red(`   Stderr: ${errorOutput}`));
+            }
+          }
         });
 
         // Desanexar processo para não afetar o octopus
@@ -1439,10 +1475,47 @@ class Octopus {
         }
 
       } catch (error) {
-        console.warn(chalk.yellow(`⚠️  Erro ao abrir terminal para ${name}: ${error.message}`));
-        resolve();
+        console.error(chalk.red(`❌ Erro crítico ao abrir terminal ${name}: ${error.message}`));
+        console.log(chalk.yellow(`🔄 Tentando fallback...`));
+        this.openTerminalFallback(name, cwd, command).then(resolve);
       }
     });
+  }
+
+  // Método de fallback mais simples para abrir terminais
+  async openTerminalFallback(name, cwd, command) {
+    console.log(chalk.yellow(`🔄 Executando fallback para terminal: ${name}`));
+    
+    try {
+      const platform = process.platform;
+      
+      if (platform === 'darwin') {
+        // Fallback simples para macOS - apenas executar no terminal atual
+        console.log(chalk.blue(`🍎 Fallback macOS: executando no terminal atual`));
+        console.log(chalk.cyan(`📂 cd ${cwd}`));
+        console.log(chalk.cyan(`⚡ ${command}`));
+        console.log(chalk.gray(`💡 Execute manualmente os comandos acima em um novo terminal`));
+      } else if (platform === 'win32') {
+        // Fallback para Windows - tentar PowerShell
+        console.log(chalk.blue(`🪟 Tentando PowerShell como fallback...`));
+        const { spawn } = require('child_process');
+        spawn('powershell', ['-Command', `Start-Process powershell -ArgumentList '-NoExit','-Command','cd \\"${cwd}\\"; Write-Host \\"🐙 ${name} - Executando...\\" -ForegroundColor Green; ${command}'`], {
+          detached: true,
+          stdio: 'ignore'
+        });
+      } else {
+        // Fallback para Linux - instruções manuais
+        console.log(chalk.blue(`🐧 Fallback Linux: instruções manuais`));
+        console.log(chalk.cyan(`📂 cd ${cwd}`));
+        console.log(chalk.cyan(`⚡ ${command}`));
+        console.log(chalk.gray(`💡 Execute manualmente os comandos acima em um novo terminal`));
+      }
+    } catch (error) {
+      console.error(chalk.red(`❌ Fallback também falhou: ${error.message}`));
+      console.log(chalk.yellow(`💡 Comandos para execução manual:`));
+      console.log(chalk.cyan(`   cd ${cwd}`));
+      console.log(chalk.cyan(`   ${command}`));
+    }
   }
 
   // Método para tentar diferentes estratégias de comando com fallback automático
