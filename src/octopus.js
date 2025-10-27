@@ -1366,6 +1366,13 @@ class Octopus {
     console.log(chalk.gray(`   ⚡ Comando: ${command}`));
     console.log(chalk.gray(`   🖥️  Platform: ${process.platform}`));
     
+    // Verificar se o diretório existe antes de tentar abrir terminal
+    if (!fs.existsSync(cwd)) {
+      console.error(chalk.red(`❌ Diretório não existe: ${cwd}`));
+      console.log(chalk.yellow(`💡 Execute 'yarn oct init' ou clone o repositório manualmente`));
+      return;
+    }
+    
     return new Promise((resolve) => {
       try {
         const platform = process.platform;
@@ -1387,10 +1394,14 @@ class Octopus {
           args = ['-e', appleScript];
           console.log(chalk.cyan(`🍎 Usando Terminal.app no macOS`));
         } else if (platform === 'win32') {
-          // Windows - melhorado com título
+          // Windows - comando simplificado e mais confiável
+          const windowsCommand = `cd /d "${cwd}" && echo [OCTOPUS] ${name} - Iniciando... && echo Comando: ${command} && echo ======================================== && ${command}`;
+          
           terminalCommand = 'cmd';
-          args = ['/c', 'start', '"' + name + '"', 'cmd', '/k', `cd /d "${cwd}" & echo [OCTOPUS] ${name} - Executando... & echo Comando: ${command} & echo ---------------------------------------- & ${command}`];
+          args = ['/c', 'start', `"${name}"`, 'cmd', '/k', windowsCommand];
+          
           console.log(chalk.cyan(`🪟 Usando CMD no Windows`));
+          console.log(chalk.gray(`   Comando Windows: ${windowsCommand}`));
         } else {
           // Linux - tentar múltiplos terminais com títulos
           const terminals = [
@@ -1496,10 +1507,22 @@ class Octopus {
         console.log(chalk.cyan(`⚡ ${command}`));
         console.log(chalk.gray(`💡 Execute manualmente os comandos acima em um novo terminal`));
       } else if (platform === 'win32') {
-        // Fallback para Windows - tentar PowerShell
-        console.log(chalk.blue(`🪟 Tentando PowerShell como fallback...`));
+        // Fallback para Windows - comando mais simples
+        console.log(chalk.blue(`🪟 Fallback Windows: tentando comando mais simples...`));
+        
+        // Verificar se o diretório existe
+        if (!fs.existsSync(cwd)) {
+          console.error(chalk.red(`❌ Diretório não existe: ${cwd}`));
+          console.log(chalk.yellow(`💡 Verifique se o repositório foi clonado corretamente`));
+          return;
+        }
+        
         const { spawn } = require('child_process');
-        spawn('powershell', ['-Command', `Start-Process powershell -ArgumentList '-NoExit','-Command','cd \\"${cwd}\\"; Write-Host \\"🐙 ${name} - Executando...\\" -ForegroundColor Green; ${command}'`], {
+        const simpleCmd = `cmd /c "cd /d \\"${cwd}\\" && echo === ${name} === && echo Diretorio: ${cwd} && echo Comando: ${command} && echo. && ${command} && pause"`;
+        
+        console.log(chalk.gray(`   Comando simples: ${simpleCmd}`));
+        
+        spawn('cmd', ['/c', 'start', `"${name}"`, 'cmd', '/k', `cd /d "${cwd}" && echo === ${name} === && echo Diretorio: ${cwd} && echo Comando: ${command} && echo. && ${command}`], {
           detached: true,
           stdio: 'ignore'
         });
